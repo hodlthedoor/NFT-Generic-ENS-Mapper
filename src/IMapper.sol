@@ -6,7 +6,7 @@ import "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 interface IMapper {
 
     //add new ENS => NFT contract settings
-    function addEnsContractMapping(uint256 _ensId, address[] calldata _address, bool _numericOnly, bool _overWriteUnusedSubdomains) external;   
+    function addEnsContractMapping(bytes32 _ensHash, address[] calldata _address, bool _numericOnly, bool _overWriteUnusedSubdomains) external;   
 
     //claim a subdomain from a valid ENS domain using a valid address / id
     function claimSubdomain(uint256 _ensId, uint256 _tokenId, IERC721 _nftContractAddress, string calldata _label) external;
