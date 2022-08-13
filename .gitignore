@@ -1,0 +1,4 @@
+*.json
+/lib
+/out
+/cache
