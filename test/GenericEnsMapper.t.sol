@@ -20,9 +20,16 @@ contract GenericEnsMapperTests is Test {
     event AddrChanged(bytes32 indexed node, address a);
 
     GenericEnsMapper private mapper;
+    uint256 private EnsTokenId;
+    bytes32 private EnsTokenHash;
 
     function setUp() public {
         mapper = new GenericEnsMapper();
+        string[] memory arr = new string[](2);
+        arr[0] = "test";
+        arr[1] = "eth";
+        EnsTokenHash = mapper.getDomainHash(arr);
+        EnsTokenId = uint256(EnsTokenHash);
     }
 
     function setupMockEns(address _owner) private {
@@ -64,7 +71,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 666;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -106,7 +113,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 667;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = true;
         bool overwriteUnusedSubdomains = false;
@@ -148,7 +155,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 668;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = true;
@@ -190,7 +197,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -238,7 +245,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsForSingleNftEnsIdDoesNotExist_fail() public {
         //assign
-        uint256 ensId = 666;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -262,7 +269,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsNotOwnerOrApproved_fail() public {
         //assign
-        uint256 ensId = 666;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -291,7 +298,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = true;
         bool overwriteUnusedSubdomains = false;
@@ -316,7 +323,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsForSingleNftContractNotIERC721_fail() public {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -341,7 +348,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsForThreeNftContractOneNotIERC721_fail() public {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -370,7 +377,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsAlreadyConfiguredAddNftContract_pass() public {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -417,7 +424,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -450,7 +457,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -479,7 +486,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -514,7 +521,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 669;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = true;
         bool overwriteUnusedSubdomains = false;
@@ -545,7 +552,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 670;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -581,7 +588,7 @@ contract GenericEnsMapperTests is Test {
 
     function testConfigureEnsWith6NftContracts_fail() public {
         //assign
-        uint256 ensId = 670;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -618,7 +625,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 669;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -660,7 +667,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 680;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -715,7 +722,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainWithEligibleNft_pass() public {
         //assign
-        uint256 ensId = 681;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -760,7 +767,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainWithNftIdHigherThanUint96Max_fail() public {
         //assign
-        uint256 ensId = 682;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -795,7 +802,7 @@ contract GenericEnsMapperTests is Test {
     function testClaimSubdomainWithTwoEligibleNft_pass() public {
         //assign
 
-        bytes32 ensHash = bytes32(uint256(681));
+        bytes32 ensHash = bytes32(EnsTokenId);
         Mock721 nft = new Mock721();
 
         uint256 tokenId = 420;
@@ -848,7 +855,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainWithNftThatAlreadyHasSubdomain_fail() public {
         //assign
-        uint256 ensId = 681;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -897,7 +904,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainThatHasAlreadyBeenClaimed() public {
         //assign
-        uint256 ensId = 683;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -936,7 +943,7 @@ contract GenericEnsMapperTests is Test {
 
     function testRemoveSubdomainFromNotApprovedAddress_fail() public {
         //assign
-        uint256 ensId = 681;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -991,7 +998,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimAndRemoveSubdomainThenApplyNewSubdomain_pass() public {
         //assign
-        uint256 ensId = 681;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1053,7 +1060,7 @@ contract GenericEnsMapperTests is Test {
     function testClaimSubdomainFromMultipleNftEnsContract_pass() public {
         //assign
 
-        bytes32 ensHash = bytes32(uint256(999));
+        bytes32 ensHash = EnsTokenHash;
 
         string memory label1 = "label1";
         string memory label2 = "label2";
@@ -1145,7 +1152,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainFromIncorrectButExistingNft_fail() public {
         //assign
-        uint256 ensId = 688;
+        uint256 ensId = EnsTokenId;
         uint256 ensId2 = 689;
         bytes32 ensHash = bytes32(ensId);
         bytes32 ensHash2 = bytes32(ensId2);
@@ -1191,7 +1198,7 @@ contract GenericEnsMapperTests is Test {
         public
     {
         //assign
-        uint256 ensId = 688;
+        uint256 ensId = EnsTokenId;
         uint256 ensId2 = 689;
         bytes32 ensHash = bytes32(ensId);
         bytes32 ensHash2 = bytes32(ensId2);
@@ -1235,7 +1242,7 @@ contract GenericEnsMapperTests is Test {
 
     function testRemoveSubdomainApplySameSubdomainWhenAllowed_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = true;
@@ -1294,7 +1301,7 @@ contract GenericEnsMapperTests is Test {
 
     function testRemoveSubdomainApplySameSubdomainWhenNotAllowed_fail() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1352,7 +1359,7 @@ contract GenericEnsMapperTests is Test {
 
     function testClaimSubdomainWithNumericOnly_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = true;
         bool overwriteUnusedSubdomains = false;
@@ -1403,7 +1410,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddrChangedOnRegistration_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1447,7 +1454,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddressChangedOnRegistration_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1491,7 +1498,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddrChangedOnRemoval_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1536,7 +1543,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddressChangedOnRemoval_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1581,7 +1588,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddressChangedOnFunctionCallSingleNft_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
@@ -1629,7 +1636,7 @@ contract GenericEnsMapperTests is Test {
 
     function testEmitAddrChangedOnFunctionCallSingleNft_pass() public {
         //assign
-        uint256 ensId = 696;
+        uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
