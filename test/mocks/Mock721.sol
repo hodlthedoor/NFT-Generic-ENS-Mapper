@@ -15,3 +15,7 @@ contract Mock721 is ERC721 {
         _mint(_addr, _id);
     }
 }
+
+contract MockNot721 {
+    
+}

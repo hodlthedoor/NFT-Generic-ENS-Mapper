@@ -11,12 +11,13 @@ import "ens-contracts/resolvers/profiles/IAddrResolver.sol";
 import "ens-contracts/resolvers/profiles/ITextResolver.sol";
 import "ens-contracts/resolvers/profiles/INameResolver.sol";
 
-contract GenericEnsMapper {
+contract GenericEnsMapper is IAddressResolver, IAddrResolver, ITextResolver, INameResolver {
 
     
     mapping(bytes32 => Config) public EnsToConfig;
 
     ENS public EnsContract; //0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e
+    IERC721 public EnsToken; //0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85
 
 
 
@@ -25,11 +26,44 @@ contract GenericEnsMapper {
     mapping(bytes32 => IERC721[]) public ParentNodeToNftContracts;
 
 
-    function addEnsContractMapping(bytes32 _ensHash, IERC721[] calldata _address, bool _numericOnly, bool _overWriteUnusedSubdomains) external{
-        require(EnsContract.owner(_ensHash) == address(this), "controller of Ens not set to contract");
-        require(false, "not implemented");
-    }  
 
+    function addEnsContractMapping(bytes32 _ensHash, IERC721[] calldata _nftContracts, bool _numericOnly, bool _overWriteUnusedSubdomains) external{
+        require(false, "not implemented");
+        require(EnsContract.owner(_ensHash) == address(this), "controller of Ens not set to contract");   
+    } 
+
+    function addContractToExistingEns(bytes32 _ensHash, IERC721 _nftContract) external {
+        require(false, "not implemented");
+    } 
+
+    function updateSettingsToExistingEns(bytes32 _ensHash, bool _numericOnly, bool _overwriteUnusedSubdomains) external {
+        require(false, "not implemented");
+    }
+
+    function claimSubdomain(bytes32 _ensHash, uint256 _id, IERC721 _nftContract, string memory _label) external {
+        require(false, "not implemented");
+    }
+
+    function outputEvents(IERC721 _nft, uint256 _id) external {
+
+    }
+
+    ///['hodl', 'pcc', 'eth']
+    function getDomainHash(string[] calldata _domainArray) public pure returns (bytes32 namehash) {
+        
+        namehash = 0x0;
+        return namehash;
+
+        for(uint256 i = _domainArray.length; i > 0;){
+            unchecked { --i; }
+            namehash = keccak256(abi.encodePacked(namehash, keccak256(abi.encodePacked(_domainArray[i]))));
+        }
+
+    }
+
+    function removeSubdomain(bytes32 _subdomainHash) external {
+        require(false, "not implemented");
+    }
 
 
 // ENS resolver interface methods
