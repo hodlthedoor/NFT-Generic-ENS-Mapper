@@ -751,9 +751,10 @@ contract GenericEnsMapperTests is Test {
 
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
 
-        string[] memory labelArray = new string[](2);
+        string[] memory labelArray = new string[](3);
         labelArray[0] = label;
-        labelArray[1] = "eth";
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
 
@@ -815,25 +816,27 @@ contract GenericEnsMapperTests is Test {
 
         IERC721[] memory nftArray = new IERC721[](1);
         nftArray[0] = nft;
-        string memory label = "testlabel";
-        string memory label2 = "testlabel2";
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
         setupMockEnsToken(uint256(ensHash), address(this));
 
+        string memory label = "testlabel1";
+        string memory label2 = "testlabel2";
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        string[] memory labelArray2 = new string[](3);
+        labelArray[0] = label2;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
         //act
         mapper.addEnsContractMapping(ensHash, nftArray, false, false);
 
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
-
-        string[] memory labelArray = new string[](2);
-        labelArray[0] = label;
-        labelArray[1] = "eth";
-
-        string[] memory labelArray2 = new string[](2);
-        labelArray[0] = label2;
-        labelArray[1] = "eth";
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
         bytes32 subnodeHash2 = mapper.getDomainHash(labelArray2);
@@ -888,9 +891,10 @@ contract GenericEnsMapperTests is Test {
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
         vm.stopPrank();
 
-        string[] memory labelArray = new string[](2);
+        string[] memory labelArray = new string[](3);
         labelArray[0] = label;
-        labelArray[1] = "eth";
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
 
@@ -958,9 +962,10 @@ contract GenericEnsMapperTests is Test {
         nftArray[0] = nft;
         string memory label = "testlabel";
 
-        string[] memory labelArray = new string[](2);
+        string[] memory labelArray = new string[](3);
         labelArray[0] = label;
-        labelArray[1] = "eth";
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
@@ -1014,9 +1019,10 @@ contract GenericEnsMapperTests is Test {
         string memory label = "testlabel";
         string memory label2 = "222test222";
 
-        string[] memory labelArray = new string[](2);
+        string[] memory labelArray = new string[](3);
         labelArray[0] = label;
-        labelArray[1] = "eth";
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
@@ -1683,6 +1689,54 @@ contract GenericEnsMapperTests is Test {
     }
 
     //end of subdomain tests
+
+    //resolver tests
+    function testGetCorrectNameFromResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint256 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+
+        string memory name = mapper.name(subnodeHash);
+
+        assertEq(
+            name,
+            "testlabel.test.eth",
+            "Name is incorrect from name resolver"
+        );
+    }
 
     function testNamehashFunctionMainDomain() public {
         bytes32 pccEth = 0x32e8b9e368196ff01039bd331e918814dfeaf9c11fc076af54e5ea098647a280;
