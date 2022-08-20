@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.16;
-
+import "forge-std/Test.sol";
 import "ens-contracts/registry/ENS.sol";
 
-contract MockEns is ENS {
+contract MockEns is ENS, Test {
     address private ownerAddress;
+
+    mapping(bytes32 => bool) private nodeExists;
 
     constructor(address _owner) {
         ownerAddress = _owner;
@@ -24,7 +26,10 @@ contract MockEns is ENS {
         address owner,
         address resolver,
         uint64 ttl
-    ) external {}
+    ) external {
+        bytes32 namehash = keccak256(abi.encodePacked(node, label));
+        nodeExists[namehash] = true;
+    }
 
     function setSubnodeOwner(
         bytes32 node,
@@ -48,7 +53,9 @@ contract MockEns is ENS {
 
     function ttl(bytes32 node) external view returns (uint64) {}
 
-    function recordExists(bytes32 node) external view returns (bool) {}
+    function recordExists(bytes32 node) external view returns (bool) {
+        return nodeExists[node];
+    }
 
     function isApprovedForAll(address owner, address operator)
         external

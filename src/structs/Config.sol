@@ -7,4 +7,5 @@ struct Config {
     bool Initialised;
     bool NumericOnly;
     bool CanOverwriteSubdomains;
+    string[] DomainArray;
 }

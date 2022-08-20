@@ -22,14 +22,24 @@ contract GenericEnsMapperTests is Test {
     GenericEnsMapper private mapper;
     uint256 private EnsTokenId;
     bytes32 private EnsTokenHash;
+    uint256 private EnsTokenId2;
+    bytes32 private EnsTokenHash2;
+    string[] private DomainArray;
+    string[] private DomainArray2;
 
     function setUp() public {
         mapper = new GenericEnsMapper();
-        string[] memory arr = new string[](2);
-        arr[0] = "test";
-        arr[1] = "eth";
-        EnsTokenHash = mapper.getDomainHash(arr);
+        DomainArray = new string[](2);
+        DomainArray[0] = "test";
+        DomainArray[1] = "eth";
+
+        DomainArray2 = new string[](2);
+        DomainArray2[0] = "test2";
+        DomainArray2[1] = "eth";
+        EnsTokenHash = mapper.getDomainHash(DomainArray);
+        EnsTokenHash2 = mapper.getDomainHash(DomainArray2);
         EnsTokenId = uint256(EnsTokenHash);
+        EnsTokenId2 = uint256(EnsTokenHash2);
     }
 
     function setupMockEns(address _owner) private {
@@ -40,7 +50,7 @@ contract GenericEnsMapperTests is Test {
             .checked_write(address(ens));
     }
 
-    function setupMockEnsToken(uint256[] memory _id, address[] memory _owner)
+    function setupMockEnsTokens(uint256[] memory _id, address[] memory _owner)
         private
     {
         require(_id.length == _owner.length, "array lengths different");
@@ -86,6 +96,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -128,6 +139,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -170,6 +182,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -216,6 +229,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -259,7 +273,9 @@ contract GenericEnsMapperTests is Test {
         setupMockEnsToken(ensId + 666, address(this));
 
         //act
+        vm.expectRevert("ERC721: invalid token ID");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -285,8 +301,9 @@ contract GenericEnsMapperTests is Test {
         //act
         address notOwner = address(0xfefe);
         vm.prank(notOwner);
-        vm.expectRevert("not appoved or owner of ENS");
+        vm.expectRevert("not approved or owner");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -314,6 +331,7 @@ contract GenericEnsMapperTests is Test {
         //act
         vm.expectRevert("controller of Ens not set to contract");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -339,6 +357,7 @@ contract GenericEnsMapperTests is Test {
         //act
         vm.expectRevert("need to be IERC721 contracts");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -368,6 +387,7 @@ contract GenericEnsMapperTests is Test {
         //act
         vm.expectRevert("need to be IERC721 contracts");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -394,6 +414,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -441,6 +462,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -472,6 +494,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -503,6 +526,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -537,6 +561,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -576,6 +601,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -584,6 +610,30 @@ contract GenericEnsMapperTests is Test {
 
         vm.expectRevert("maximum 5 contracts per ENS");
         mapper.addContractToExistingEns(ensHash, nft6);
+    }
+
+    function testSetupEnsWithEmptyNftArray_fail() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+
+        IERC721[] memory nftArray;
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        vm.expectRevert("need at least 1 NFT contract");
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
     }
 
     function testConfigureEnsWith6NftContracts_fail() public {
@@ -614,6 +664,7 @@ contract GenericEnsMapperTests is Test {
         //act
         vm.expectRevert("maximum 5 contracts per ENS");
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -641,6 +692,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -659,8 +711,10 @@ contract GenericEnsMapperTests is Test {
             bool overwriteUnusedSubdomainsValue
         ) = mapper.ParentNodeToConfig(ensHash);
 
+        assertTrue(initialisedValue);
+
         //assert
-        assertTrue(numericOnly, "numericOnly should be true");
+        assertTrue(numericOnlyValue, "numericOnly should be true");
     }
 
     function testConfigureEnsAlreadyConfiguredEnsChangeOverwriteSubdomains_pass()
@@ -676,7 +730,7 @@ contract GenericEnsMapperTests is Test {
 
         IERC721[] memory nftArray = new IERC721[](2);
         nftArray[0] = nft;
-        nftArray[0] = nft2;
+        nftArray[1] = nft2;
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
@@ -684,6 +738,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -692,8 +747,8 @@ contract GenericEnsMapperTests is Test {
 
         mapper.updateSettingsToExistingEns(
             ensHash,
-            !numericOnly,
-            overwriteUnusedSubdomains
+            numericOnly,
+            !overwriteUnusedSubdomains
         );
 
         (
@@ -705,11 +760,11 @@ contract GenericEnsMapperTests is Test {
         IERC721 nft2Value = mapper.ParentNodeToNftContracts(ensHash, 1);
 
         //assert
+        assertFalse(numericOnlyValue, "numericOnly should be true");
         assertTrue(
             overwriteUnusedSubdomainsValue,
-            "numericOnly should be true"
+            "overwriteUnusedSubdomainsValue should be false"
         );
-        assertFalse(numericOnly, "numericOnly should be false");
         assertEq(address(nft1Value), address(nft), "NFT 1 address incorrect");
         assertEq(address(nft2Value), address(nft2), "NFT 2 address incorrect");
     }
@@ -729,7 +784,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -743,12 +798,13 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
             overwriteUnusedSubdomains
         );
-
+        vm.prank(tokenOwner);
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
 
         string[] memory labelArray = new string[](3);
@@ -758,46 +814,12 @@ contract GenericEnsMapperTests is Test {
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
 
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, tokenId, "NFT token id incorrect");
-    }
-
-    function testClaimSubdomainWithNftIdHigherThanUint96Max_fail() public {
-        //assign
-        uint256 ensId = EnsTokenId;
-        bytes32 ensHash = bytes32(ensId);
-        bool numericOnly = false;
-        bool overwriteUnusedSubdomains = false;
-        Mock721 nft = new Mock721();
-
-        address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 0xffffffffffff + 1; //uint96.max + 1
-
-        nft.mintTokenById(tokenOwner, tokenId);
-
-        IERC721[] memory nftArray = new IERC721[](1);
-        nftArray[0] = nft;
-        string memory label = "testlabel";
-
-        //set up mock ens with the mapper contract as controller
-        setupMockEns(address(mapper));
-        setupMockEnsToken(ensId, address(this));
-
-        //act
-        mapper.addEnsContractMapping(
-            ensHash,
-            nftArray,
-            numericOnly,
-            overwriteUnusedSubdomains
-        );
-
-        vm.prank(tokenOwner);
-        vm.expectRevert("Invalid token Id");
-        mapper.claimSubdomain(ensHash, tokenId, nft, label);
     }
 
     function testClaimSubdomainWithTwoEligibleNft_pass() public {
@@ -806,8 +828,8 @@ contract GenericEnsMapperTests is Test {
         bytes32 ensHash = bytes32(EnsTokenId);
         Mock721 nft = new Mock721();
 
-        uint256 tokenId = 420;
-        uint256 tokenId2 = 666;
+        uint96 tokenId = 420;
+        uint96 tokenId2 = 666;
 
         //address tokenOwner = address(0xfafbfc);
 
@@ -819,7 +841,7 @@ contract GenericEnsMapperTests is Test {
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
-        setupMockEnsToken(uint256(ensHash), address(this));
+        setupMockEnsToken(EnsTokenId, address(this));
 
         string memory label = "testlabel1";
         string memory label2 = "testlabel2";
@@ -828,31 +850,51 @@ contract GenericEnsMapperTests is Test {
         labelArray[1] = "test";
         labelArray[2] = "eth";
 
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            false,
+            false
+        );
+
+        vm.startPrank(address(0xfafbfc));
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+        mapper.claimSubdomain(ensHash, tokenId2, nft, label2);
+
+        bytes32 subnodeHash = keccak256(
+            abi.encodePacked(ensHash, keccak256(abi.encodePacked(label)))
+        );
+
         string[] memory labelArray2 = new string[](3);
         labelArray[0] = label2;
         labelArray[1] = "test";
         labelArray[2] = "eth";
 
-        //act
-        mapper.addEnsContractMapping(ensHash, nftArray, false, false);
+        bytes32 subnodeHash2 = keccak256(
+            abi.encodePacked(ensHash, keccak256(abi.encodePacked(label2)))
+        ); //mapper.getDomainHash(labelArray2);
 
-        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+        emit log_named_bytes32("subnodehash1", subnodeHash);
+        emit log_named_bytes32("subnodehash2", subnodeHash2);
 
-        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
-        bytes32 subnodeHash2 = mapper.getDomainHash(labelArray2);
-
-        vm.startPrank(address(0xfafbfc));
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
-        (IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
+
+        (, , IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
             subnodeHash2
         );
+
+        emit log_named_address("nft address 1", address(nftValue));
+        emit log_named_address("nft address 2", address(nftValue2));
+
         vm.stopPrank();
         assertEq(address(nftValue), address(nft), "NFT 1 address incorrect");
         assertEq(idValue, tokenId, "NFT 1 token id incorrect");
 
-        assertEq(address(nftValue), address(nft), "NFT 2 address incorrect");
+        assertEq(address(nftValue2), address(nft), "NFT 2 address incorrect");
         assertEq(idValue2, tokenId2, "NFT 2 token id incorrect");
     }
 
@@ -865,7 +907,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -879,6 +921,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -887,7 +930,7 @@ contract GenericEnsMapperTests is Test {
 
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
-        vm.expectRevert("subdomain already claimed for this token");
+        vm.expectRevert("Subdomain has already been claimed");
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
         vm.stopPrank();
 
@@ -898,7 +941,7 @@ contract GenericEnsMapperTests is Test {
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
 
@@ -906,7 +949,7 @@ contract GenericEnsMapperTests is Test {
         assertEq(idValue, tokenId, "NFT token id incorrect");
     }
 
-    function testClaimSubdomainThatHasAlreadyBeenClaimed() public {
+    function testClaimSubdomainThatHasAlreadyBeenClaimed_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
@@ -916,10 +959,11 @@ contract GenericEnsMapperTests is Test {
 
         address tokenOwner = address(0xfafbfc);
         address otherTokenOwner = address(0xccbbaa);
-        uint256 tokenId = 420;
-        uint256 otherTokenId = 777;
+        uint96 tokenId = 420;
+        uint96 otherTokenId = 777;
 
         nft.mintTokenById(tokenOwner, tokenId);
+        nft.mintTokenById(otherTokenOwner, otherTokenId);
 
         IERC721[] memory nftArray = new IERC721[](1);
         nftArray[0] = nft;
@@ -931,6 +975,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -954,7 +999,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -973,6 +1018,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -984,13 +1030,13 @@ contract GenericEnsMapperTests is Test {
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
 
         mapper.removeSubdomain(subnodeHash);
 
-        (IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
 
@@ -1010,7 +1056,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -1030,6 +1076,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1045,14 +1092,16 @@ contract GenericEnsMapperTests is Test {
 
         bytes32 subnodeHash2 = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
+
+        emit log_named_address("nft address", address(nftValue));
 
         mapper.removeSubdomain(subnodeHash);
         mapper.claimSubdomain(ensHash, tokenId, nft, label2);
 
-        (IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
             subnodeHash2
         );
 
@@ -1093,7 +1142,13 @@ contract GenericEnsMapperTests is Test {
         setupMockEnsToken(uint256(ensHash), address(this));
 
         //act
-        mapper.addEnsContractMapping(ensHash, nftArray, false, false);
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            false,
+            false
+        );
 
         vm.startPrank(address(0xaa998877));
         mapper.claimSubdomain(ensHash, 1, nftArray[0], label1);
@@ -1106,18 +1161,22 @@ contract GenericEnsMapperTests is Test {
         labelArray[0] = label2;
         bytes32 subnodeHash2 = mapper.getDomainHash(labelArray);
 
-        labelArray[1] = label3;
+        labelArray[0] = label3;
         bytes32 subnodeHash3 = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue1, uint256 idValue1) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue1, uint256 idValue1) = mapper.SubnodeToNftDetails(
             subnodeHash1
         );
-        (IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
             subnodeHash2
         );
-        (IERC721 nftValue3, uint256 idValue3) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue3, uint256 idValue3) = mapper.SubnodeToNftDetails(
             subnodeHash3
         );
+
+        emit log_named_address("nft address 1", address(nftValue1));
+        emit log_named_address("nft address 2", address(nftValue2));
+        emit log_named_address("nft address 3", address(nftValue3));
 
         assertEq(
             address(nftValue1),
@@ -1159,7 +1218,7 @@ contract GenericEnsMapperTests is Test {
     function testClaimSubdomainFromIncorrectButExistingNft_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
-        uint256 ensId2 = 689;
+        uint256 ensId2 = EnsTokenId2;
         bytes32 ensHash = bytes32(ensId);
         bytes32 ensHash2 = bytes32(ensId2);
         bool numericOnly = false;
@@ -1167,7 +1226,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -1177,11 +1236,18 @@ contract GenericEnsMapperTests is Test {
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
-        setupMockEnsToken(ensId, address(this));
-        setupMockEnsToken(ensId2, address(this));
+        uint256[] memory arr = new uint256[](2);
+        arr[0] = ensId;
+        arr[1] = ensId2;
+
+        address[] memory arr2 = new address[](2);
+        arr2[0] = address(this);
+        arr2[1] = address(this);
+        setupMockEnsTokens(arr, arr2);
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1189,6 +1255,7 @@ contract GenericEnsMapperTests is Test {
         );
         nftArray[0] = new Mock721();
         mapper.addEnsContractMapping(
+            DomainArray2,
             ensHash2,
             nftArray,
             numericOnly,
@@ -1213,7 +1280,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -1223,26 +1290,33 @@ contract GenericEnsMapperTests is Test {
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
-        setupMockEnsToken(ensId, address(this));
-        setupMockEnsToken(ensId2, address(this));
+        uint256[] memory arr = new uint256[](2);
+        arr[0] = ensId;
+        arr[1] = ensId2;
+
+        address[] memory arr2 = new address[](2);
+        arr2[0] = address(this);
+        arr2[1] = address(this);
+        setupMockEnsTokens(arr, arr2);
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
             overwriteUnusedSubdomains
         );
         nftArray[0] = new Mock721();
-        mapper.addEnsContractMapping(
-            ensHash2,
-            nftArray,
-            numericOnly,
-            overwriteUnusedSubdomains
-        );
+        // mapper.addEnsContractMapping(
+        //     ensHash2,
+        //     nftArray,
+        //     numericOnly,
+        //     overwriteUnusedSubdomains
+        // );
 
         vm.prank(tokenOwner);
-        vm.expectRevert("Not valid contract");
+        vm.expectRevert("ERC721: invalid token ID");
         mapper.claimSubdomain(ensHash, tokenId, nftArray[0], label);
     }
 
@@ -1277,6 +1351,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1286,19 +1361,27 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, 1, nft, label1);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
-            subdomainHash
-        );
+        (
+            bytes32 ParentNamehash,
+            string memory Label,
+            IERC721 nftValue,
+            uint256 idValue
+        ) = mapper.SubnodeToNftDetails(subdomainHash);
 
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, 1, "NFT token id incorrect");
         assertEq(nftValue.ownerOf(1), tokenOwner, "NFT ownerOf incorrect");
 
         mapper.removeSubdomain(subdomainHash);
+
+        (, , nftValue, idValue) = mapper.SubnodeToNftDetails(subdomainHash);
+
         assertEq(address(nftValue), address(0), "NFT address incorrect");
         assertEq(idValue, 0, "NFT token id incorrect");
 
         mapper.claimSubdomain(ensHash, 2, nft, label1);
+
+        (, , nftValue, idValue) = mapper.SubnodeToNftDetails(subdomainHash);
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, 2, "NFT token id incorrect");
 
@@ -1336,6 +1419,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1345,7 +1429,7 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, 1, nft, label1);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subdomainHash
         );
 
@@ -1354,6 +1438,9 @@ contract GenericEnsMapperTests is Test {
         assertEq(nftValue.ownerOf(1), tokenOwner, "NFT ownerOf incorrect");
 
         mapper.removeSubdomain(subdomainHash);
+
+        (, , nftValue, idValue) = mapper.SubnodeToNftDetails(subdomainHash);
+
         assertEq(address(nftValue), address(0), "NFT address incorrect");
         assertEq(idValue, 0, "NFT token id incorrect");
 
@@ -1392,6 +1479,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1405,9 +1493,12 @@ contract GenericEnsMapperTests is Test {
         labelArray[0] = "2";
         bytes32 subdomainHash = mapper.getDomainHash(labelArray);
 
-        (IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
-            subdomainHash
-        );
+        (
+            bytes32 ParentNamehash,
+            string memory Label,
+            IERC721 nftValue,
+            uint256 idValue
+        ) = mapper.SubnodeToNftDetails(subdomainHash);
 
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, 2, "NFT token id incorrect");
@@ -1445,6 +1536,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1453,8 +1545,8 @@ contract GenericEnsMapperTests is Test {
 
         vm.startPrank(tokenOwner);
 
-        vm.expectEmit(true, false, true, true);
-        //emit mapper.AddrChanged(subdomainHash, tokenOwner);
+        vm.expectEmit(true, false, false, false);
+        emit AddrChanged(subdomainHash, tokenOwner);
         mapper.claimSubdomain(ensHash, 2, nft, label1);
     }
 
@@ -1489,6 +1581,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1497,8 +1590,8 @@ contract GenericEnsMapperTests is Test {
 
         vm.startPrank(tokenOwner);
 
-        vm.expectEmit(true, false, true, true);
-        //emit mapper.AddressChanged(subdomainHash, 60, tokenOwner);
+        vm.expectEmit(true, true, false, false);
+        emit AddressChanged(subdomainHash, 60, abi.encodePacked(tokenOwner));
         mapper.claimSubdomain(ensHash, 2, nft, label1);
     }
 
@@ -1533,6 +1626,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1542,7 +1636,7 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, 2, nft, label1);
 
-        vm.expectEmit(true, false, true, true);
+        vm.expectEmit(true, false, false, false);
         emit AddrChanged(subdomainHash, address(0));
         mapper.removeSubdomain(subdomainHash);
     }
@@ -1578,6 +1672,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1587,7 +1682,7 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, 2, nft, label1);
 
-        vm.expectEmit(true, false, true, true, address(mapper));
+        vm.expectEmit(true, false, false, false, address(mapper));
         emit AddressChanged(subdomainHash, 60, abi.encode(address(0)));
         mapper.removeSubdomain(subdomainHash);
     }
@@ -1623,6 +1718,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1637,7 +1733,7 @@ contract GenericEnsMapperTests is Test {
 
         vm.expectEmit(true, false, true, true, address(mapper));
         emit AddressChanged(subdomainHash, 60, abi.encodePacked(newTokenOwner));
-        mapper.outputEvents(nft, 2);
+        mapper.outputEvents(subdomainHash);
     }
 
     function testEmitAddrChangedOnFunctionCallSingleNft_pass() public {
@@ -1671,6 +1767,7 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
@@ -1683,9 +1780,9 @@ contract GenericEnsMapperTests is Test {
         address newTokenOwner = address(0x121212);
         nft.safeTransferFrom(tokenOwner, newTokenOwner, 2, "");
 
-        vm.expectEmit(true, false, true, true, address(mapper));
+        vm.expectEmit(true, false, false, false, address(mapper));
         emit AddrChanged(subdomainHash, newTokenOwner);
-        mapper.outputEvents(nft, 2);
+        mapper.outputEvents(subdomainHash);
     }
 
     //end of subdomain tests
@@ -1700,7 +1797,7 @@ contract GenericEnsMapperTests is Test {
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
-        uint256 tokenId = 420;
+        uint96 tokenId = 420;
 
         nft.mintTokenById(tokenOwner, tokenId);
 
@@ -1714,12 +1811,14 @@ contract GenericEnsMapperTests is Test {
 
         //act
         mapper.addEnsContractMapping(
+            DomainArray,
             ensHash,
             nftArray,
             numericOnly,
             overwriteUnusedSubdomains
         );
 
+        vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, tokenId, nft, label);
 
         string[] memory labelArray = new string[](3);
