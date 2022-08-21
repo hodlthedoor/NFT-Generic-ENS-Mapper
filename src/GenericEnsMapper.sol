@@ -11,19 +11,21 @@ import "ens-contracts/resolvers/profiles/IAddressResolver.sol";
 import "ens-contracts/resolvers/profiles/IAddrResolver.sol";
 import "ens-contracts/resolvers/profiles/ITextResolver.sol";
 import "ens-contracts/resolvers/profiles/INameResolver.sol";
-
+import "ens-contracts/wrapper/INameWrapper.sol";
+import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 contract GenericEnsMapper is
     IAddressResolver,
     IAddrResolver,
     ITextResolver,
-    INameResolver
+    INameResolver,
+    IERC1155Receiver
 {
     using Strings for *;
 
     uint256 private constant COIN_TYPE_ETH = 60;
 
-
+    INameWrapper EnsNameWrapper;
 
     ENS public EnsContract = ENS(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e);
     IERC721 public EnsToken =
@@ -170,13 +172,25 @@ contract GenericEnsMapper is
 
         SubnodeToNftDetails[subnodeHash] = details;
 
-        EnsContract.setSubnodeRecord(
-            _ensHash,
-            keccak256(abi.encodePacked(label)),
-            address(this),
-            address(this),
-            0
-        );
+        if (EnsContract.owner(_ensHash) == address(EnsNameWrapper)) {
+            EnsNameWrapper.setSubnodeRecord(
+                _ensHash,
+                label,
+                address(this),
+                address(this),
+                0, //ttl
+                0, //fuses
+                type(uint64).max
+            );
+        } else {
+            EnsContract.setSubnodeRecord(
+                _ensHash,
+                keccak256(abi.encodePacked(label)),
+                address(this),
+                address(this),
+                0
+            );
+        }
 
         emit AddrChanged(subnodeHash, _nftContract.ownerOf(_id));
         emit AddressChanged(
@@ -369,6 +383,42 @@ contract GenericEnsMapper is
         return owner;
     }
 
+    //ERC1155 receiver
+
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external returns (bytes4) {
+        require(false, "cannot do batch transfer");
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        external
+        view
+        returns (bool)
+    {
+        return
+            interfaceId == this.onERC1155Received.selector ||
+            interfaceId == 0x3b3b57de || //addr
+            interfaceId == 0x59d1d43c || //text
+            interfaceId == 0x691f3431 || //name
+            interfaceId == 0x01ffc9a7;
+    }
+
     modifier isNftOwner(IERC721 _nftContract, uint96 _id) {
         require(_nftContract.ownerOf(_id) == msg.sender, "not owner of NFT");
         _;
@@ -378,7 +428,12 @@ contract GenericEnsMapper is
         address owner = EnsToken.ownerOf(uint256(_ensHash));
         require(
             owner == msg.sender ||
-                EnsToken.isApprovedForAll(owner, msg.sender) ,
+                EnsToken.isApprovedForAll(owner, msg.sender) ||
+                (owner == address(EnsNameWrapper) &&
+                    EnsNameWrapper.isTokenOwnerOrApproved(
+                        _ensHash,
+                        msg.sender
+                    )),
             "not approved or owner"
         );
         _;
