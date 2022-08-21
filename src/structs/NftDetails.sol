@@ -7,5 +7,5 @@ struct NftDetails {
     bytes32 ParentNamehash;
     string Label;
     IERC721 NftAddress;
-    uint96 NftId; //doing this for memory space.. unlikely we get id more than this.
+    uint96 NftId; //this actually saves about 20,000 gas in the claim subdomain method
 }

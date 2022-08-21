@@ -18,6 +18,12 @@ contract GenericEnsMapperTests is Test {
         bytes newAddress
     );
     event AddrChanged(bytes32 indexed node, address a);
+    event SubdomainClaimed(
+        bytes32 indexed _nodeHash,
+        IERC721 indexed _nftContract,
+        uint96 indexed _tokenId,
+        string _name
+    );
 
     GenericEnsMapper private mapper;
     uint256 private EnsTokenId;
@@ -364,7 +370,57 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
     }
+  function testConfigureEnsTwice_fail()
+        public
+    {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        IERC721 nft = new Mock721();
 
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.expectRevert("already been configured");
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            !numericOnly,
+            !overwriteUnusedSubdomains
+        );
+
+        (
+            bool initialisedValue,
+            bool numericOnlyValue,
+            bool overwriteUnusedSubdomainsValue
+        ) = mapper.ParentNodeToConfig(ensHash);
+        IERC721 nftValue = mapper.ParentNodeToNftContracts(ensHash, 0);
+
+        //assert
+        assertEq(
+            overwriteUnusedSubdomainsValue,
+            overwriteUnusedSubdomains,
+            "overwrite subdomains incorrect"
+        );
+        assertEq(numericOnlyValue, numericOnly, "numericOnly incorrect");
+        assertEq(address(nftValue), address(nft), "nft object incorrect");
+    }
     function testConfigureEnsForThreeNftContractOneNotIERC721_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
@@ -1033,7 +1089,9 @@ contract GenericEnsMapperTests is Test {
         (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
             subnodeHash
         );
-
+        vm.stopPrank();
+        vm.expectRevert("not owner of token");
+        vm.prank(address(0x334343));
         mapper.removeSubdomain(subnodeHash);
 
         (, , IERC721 nftValue2, uint256 idValue2) = mapper.SubnodeToNftDetails(
@@ -1043,8 +1101,9 @@ contract GenericEnsMapperTests is Test {
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, tokenId, "NFT token id incorrect");
 
-        assertEq(address(nftValue2), address(0), "Reset NFT address incorrect");
-        assertEq(idValue2, 0, "Reset NFT token id incorrect");
+        //these addresses shouldn't reset as a none owner tried to reset the domain
+        assertEq(address(nftValue2), address(nft), "Reset NFT address incorrect");
+        assertEq(idValue2, tokenId, "Reset NFT token id incorrect");
     }
 
     function testClaimAndRemoveSubdomainThenApplyNewSubdomain_pass() public {
@@ -1550,6 +1609,51 @@ contract GenericEnsMapperTests is Test {
         mapper.claimSubdomain(ensHash, 2, nft, label1);
     }
 
+    function testEmitSubdomainClaimedOnRegistration_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0x123456);
+
+        nft.mintTokenById(tokenOwner, 1);
+        nft.mintTokenById(tokenOwner, 2);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+
+        string memory label1 = "label1";
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label1;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subdomainHash = mapper.getDomainHash(labelArray);
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+
+        vm.expectEmit(true, true, true, false, address(mapper));
+        emit SubdomainClaimed(subdomainHash,nft, 2, "label1.test.eth");
+        mapper.claimSubdomain(ensHash, 2, nft, label1);
+    }
+
     function testEmitAddressChangedOnRegistration_pass() public {
         //assign
         uint256 ensId = EnsTokenId;
@@ -1835,6 +1939,597 @@ contract GenericEnsMapperTests is Test {
             "testlabel.test.eth",
             "Name is incorrect from name resolver"
         );
+    }
+
+    function testGetAndSetCorrectTextFromResolverFromNotSubdomainHolder_fail()
+        public
+    {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+
+        string memory key = "test";
+        string memory value = "value";
+
+        vm.stopPrank();
+        vm.prank(address(0x55555));
+        vm.expectRevert("not owner of subdomain");
+        mapper.setText(subnodeHash, key, value);
+    }
+
+    function testGetAndSetCorrectTextFromResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+
+        string memory key = "test";
+        string memory value = "value";
+        mapper.setText(subnodeHash, key, value);
+        string memory returnValue = mapper.text(subnodeHash, key);
+
+        emit log_named_string("text value", returnValue);
+        assertEq(
+            address(nft),
+            0x185a4dc360CE69bDCceE33b3784B0282f7961aea,
+            "nft address incorrect, test will fail"
+        );
+        assertEq(
+            returnValue,
+            value,
+            "Text value is incorrect from text resolver"
+        );
+    }
+
+    function testGetCorrectAvatarFromResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+
+        string memory avatar = mapper.text(subnodeHash, "avatar");
+
+        emit log_named_string("avatar text", avatar);
+        assertEq(
+            address(nft),
+            0x185a4dc360CE69bDCceE33b3784B0282f7961aea,
+            "nft address incorrect, test will fail"
+        );
+        assertEq(
+            avatar,
+            "eip155:erc721:0x185a4dc360ce69bdccee33b3784b0282f7961aea/420",
+            "Avatar is incorrect from text resolver"
+        );
+    }
+
+   function testGetNoAddrFromAddrResolverAfterSubdomainRemoved_fail() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        mapper.removeSubdomain(subnodeHash);
+        
+        vm.expectRevert("subdomain not configured");
+        address addr =    mapper.addr(subnodeHash);
+
+    }
+
+    function testGetCorrectAddrFromAddrResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+
+        assertEq(
+            mapper.addr(subnodeHash),
+            tokenOwner,
+            "Address is incorrect from address resolver"
+        );
+    }
+
+    function testGetCorrectAddressFromAddressResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        bytes memory addressBytes = mapper.addr(subnodeHash, 60);
+        address addr;
+        assembly {
+            addr := mload(add(addressBytes, 20))
+        }
+
+        assertEq(
+            addr,
+            tokenOwner,
+            "Address is incorrect from address resolver"
+        );
+    }
+
+    function testGetCorrectAddressAfterNftTransferFromAddressResolver_pass()
+        public
+    {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        bytes memory addressBytes = mapper.addr(subnodeHash, 60);
+        address addr;
+        assembly {
+            addr := mload(add(addressBytes, 20))
+        }
+
+        assertEq(
+            addr,
+            tokenOwner,
+            "Address is incorrect from address resolver"
+        );
+
+        address newTokenOwner = address(0x121212);
+        nft.safeTransferFrom(tokenOwner, newTokenOwner, tokenId, "");
+
+        addressBytes = mapper.addr(subnodeHash, 60);
+
+        assembly {
+            addr := mload(add(addressBytes, 20))
+        }
+
+        assertEq(
+            addr,
+            newTokenOwner,
+            "Address is incorrect from address resolver"
+        );
+    }
+
+    function testGetEmptyOtherAddressFromAddressResolverAfterTransfer_pass()
+        public
+    {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        address otherAddress = address(0x122244);
+        uint256 coinType = 22;
+        mapper.setAddr(subnodeHash, coinType, abi.encodePacked(otherAddress));
+        bytes memory addressBytes = mapper.addr(subnodeHash, coinType);
+        address addr;
+        assembly {
+            addr := mload(add(addressBytes, 20))
+        }
+
+        assertEq(
+            addr,
+            otherAddress,
+            "Address is incorrect from address resolver"
+        );
+
+        address newTokenOwner = address(0x121212);
+        nft.safeTransferFrom(tokenOwner, newTokenOwner, tokenId, "");
+
+        addressBytes = mapper.addr(subnodeHash, coinType);
+
+        assertEq(addressBytes.length, 0, "address should be empty");
+    }
+
+    function testGetCorrectOtherAddressFromAddressResolver_pass() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        address otherAddress = address(0x122244);
+        uint256 coinType = 22;
+        mapper.setAddr(subnodeHash, coinType, abi.encodePacked(otherAddress));
+        bytes memory addressBytes = mapper.addr(subnodeHash, coinType);
+        address addr;
+        assembly {
+            addr := mload(add(addressBytes, 20))
+        }
+
+        assertEq(
+            addr,
+            otherAddress,
+            "Address is incorrect from address resolver"
+        );
+    }
+
+    function testSetEthOtherAddressFromAddressResolver_fail() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        address otherAddress = address(0x122244);
+        uint256 coinType = 60;
+        vm.expectRevert("cannot set eth address");
+        mapper.setAddr(subnodeHash, coinType, abi.encodePacked(otherAddress));
+    }
+
+    function testGetCorrectOtherAddressFromAddressResolverFromNotOwnerOfSubdomain_fail()
+        public
+    {
+        //assign
+        uint256 ensId = EnsTokenId;
+        bytes32 ensHash = bytes32(ensId);
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        Mock721 nft = new Mock721();
+
+        address tokenOwner = address(0xfafbfc);
+        uint96 tokenId = 420;
+
+        nft.mintTokenById(tokenOwner, tokenId);
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+        string memory label = "testlabel";
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act
+        mapper.addEnsContractMapping(
+            DomainArray,
+            ensHash,
+            nftArray,
+            numericOnly,
+            overwriteUnusedSubdomains
+        );
+
+        vm.startPrank(tokenOwner);
+        mapper.claimSubdomain(ensHash, tokenId, nft, label);
+
+        string[] memory labelArray = new string[](3);
+        labelArray[0] = label;
+        labelArray[1] = "test";
+        labelArray[2] = "eth";
+
+        bytes32 subnodeHash = mapper.getDomainHash(labelArray);
+        address otherAddress = address(0x122244);
+        uint256 coinType = 22;
+        vm.stopPrank();
+        vm.startPrank(address(0x55222444));
+        vm.expectRevert("not owner of subdomain");
+        mapper.setAddr(subnodeHash, coinType, abi.encodePacked(otherAddress));
     }
 
     function testNamehashFunctionMainDomain() public {
