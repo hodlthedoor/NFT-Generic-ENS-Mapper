@@ -25,6 +25,10 @@ contract GenericEnsMapper is
 
     uint256 private constant COIN_TYPE_ETH = 60;
 
+    event addNftContractToEns(bytes32 indexed _ensHash, IERC721 indexed _nftContract);
+    event updateEnsClaimConfig(bytes32 indexed _ensHash, bool _numericOnly, bool _canOverwriteSubdomains);
+
+
     INameWrapper EnsNameWrapper;
 
     ENS public EnsContract = ENS(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e);
@@ -40,6 +44,13 @@ contract GenericEnsMapper is
     mapping(bytes32 => mapping(bytes32 => string)) TextMappings;
 
     event SubdomainClaimed(
+        bytes32 indexed _nodeHash,
+        IERC721 indexed _nftContract,
+        uint96 indexed _tokenId,
+        string _name
+    );
+
+    event SubdomainRemoved(
         bytes32 indexed _nodeHash,
         IERC721 indexed _nftContract,
         uint96 indexed _tokenId,
@@ -92,6 +103,19 @@ contract GenericEnsMapper is
             _domainArray
         );
         ParentNodeToNftContracts[_ensHash] = _nftContracts;
+
+
+        //output events
+        emit updateEnsClaimConfig(_ensHash, _numericOnly, _overWriteUnusedSubdomains);
+
+        for(uint256 i; i < _nftContracts.length;){
+
+            emit addNftContractToEns(_ensHash, _nftContracts[i]);
+            
+            unchecked{
+                ++i;
+            }
+        }
     }
 
     function addContractToExistingEns(bytes32 _ensHash, IERC721 _nftContract)
@@ -110,6 +134,7 @@ contract GenericEnsMapper is
         );
 
         ParentNodeToNftContracts[_ensHash].push(_nftContract);
+        emit addNftContractToEns(_ensHash, _nftContract);
     }
 
     function updateSettingsToExistingEns(
@@ -128,6 +153,8 @@ contract GenericEnsMapper is
         config.CanOverwriteSubdomains = _overwriteUnusedSubdomains;
 
         ParentNodeToConfig[_ensHash] = config;
+
+        emit updateEnsClaimConfig(_ensHash, _numericOnly, _overwriteUnusedSubdomains);
     }
 
     /**
@@ -267,6 +294,7 @@ contract GenericEnsMapper is
 
         emit AddrChanged(_subdomainHash, address(0));
         emit AddressChanged(_subdomainHash, 60, abi.encodePacked(address(0)));
+        emit SubdomainRemoved(_subdomainHash, details.NftAddress, details.NftId, name(_subdomainHash));
     }
 
     // ENS resolver interface methods
