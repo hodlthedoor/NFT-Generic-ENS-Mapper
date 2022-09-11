@@ -370,9 +370,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
     }
-  function testConfigureEnsTwice_fail()
-        public
-    {
+
+    function testConfigureEnsTwice_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
@@ -421,6 +420,7 @@ contract GenericEnsMapperTests is Test {
         assertEq(numericOnlyValue, numericOnly, "numericOnly incorrect");
         assertEq(address(nftValue), address(nft), "nft object incorrect");
     }
+
     function testConfigureEnsForThreeNftContractOneNotIERC721_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
@@ -1102,7 +1102,11 @@ contract GenericEnsMapperTests is Test {
         assertEq(idValue, tokenId, "NFT token id incorrect");
 
         //these addresses shouldn't reset as a none owner tried to reset the domain
-        assertEq(address(nftValue2), address(nft), "Reset NFT address incorrect");
+        assertEq(
+            address(nftValue2),
+            address(nft),
+            "Reset NFT address incorrect"
+        );
         assertEq(idValue2, tokenId, "Reset NFT token id incorrect");
     }
 
@@ -1650,7 +1654,7 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
 
         vm.expectEmit(true, true, true, false, address(mapper));
-        emit SubdomainClaimed(subdomainHash,nft, 2, "label1.test.eth");
+        emit SubdomainClaimed(subdomainHash, nft, 2, "label1.test.eth");
         mapper.claimSubdomain(ensHash, 2, nft, label1);
     }
 
@@ -2105,7 +2109,7 @@ contract GenericEnsMapperTests is Test {
         );
     }
 
-   function testGetNoAddrFromAddrResolverAfterSubdomainRemoved_fail() public {
+    function testGetNoAddrFromAddrResolverAfterSubdomainRemoved_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
         bytes32 ensHash = bytes32(ensId);
@@ -2145,10 +2149,9 @@ contract GenericEnsMapperTests is Test {
 
         bytes32 subnodeHash = mapper.getDomainHash(labelArray);
         mapper.removeSubdomain(subnodeHash);
-        
-        vm.expectRevert("subdomain not configured");
-        address addr =    mapper.addr(subnodeHash);
 
+        vm.expectRevert("subdomain not configured");
+        address addr = mapper.addr(subnodeHash);
     }
 
     function testGetCorrectAddrFromAddrResolver_pass() public {

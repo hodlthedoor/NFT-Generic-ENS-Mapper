@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.16;
 
+import "forge-std/console.sol";
 import "./structs/Config.sol";
 import "./structs/NftDetails.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
@@ -25,11 +26,17 @@ contract GenericEnsMapper is
 
     uint256 private constant COIN_TYPE_ETH = 60;
 
-    event addNftContractToEns(bytes32 indexed _ensHash, IERC721 indexed _nftContract);
-    event updateEnsClaimConfig(bytes32 indexed _ensHash, bool _numericOnly, bool _canOverwriteSubdomains);
+    event addNftContractToEns(
+        bytes32 indexed _ensHash,
+        IERC721 indexed _nftContract
+    );
+    event updateEnsClaimConfig(
+        bytes32 indexed _ensHash,
+        bool _numericOnly,
+        bool _canOverwriteSubdomains
+    );
 
-
-    INameWrapper EnsNameWrapper;
+    INameWrapper public EnsNameWrapper;
 
     ENS public EnsContract = ENS(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e);
     IERC721 public EnsToken =
@@ -104,15 +111,17 @@ contract GenericEnsMapper is
         );
         ParentNodeToNftContracts[_ensHash] = _nftContracts;
 
-
         //output events
-        emit updateEnsClaimConfig(_ensHash, _numericOnly, _overWriteUnusedSubdomains);
+        emit updateEnsClaimConfig(
+            _ensHash,
+            _numericOnly,
+            _overWriteUnusedSubdomains
+        );
 
-        for(uint256 i; i < _nftContracts.length;){
-
+        for (uint256 i; i < _nftContracts.length; ) {
             emit addNftContractToEns(_ensHash, _nftContracts[i]);
-            
-            unchecked{
+
+            unchecked {
                 ++i;
             }
         }
@@ -141,7 +150,7 @@ contract GenericEnsMapper is
         bytes32 _ensHash,
         bool _numericOnly,
         bool _overwriteUnusedSubdomains
-    ) external {
+    ) external isEnsApprovedOrOwner(_ensHash) {
         require(
             !(ParentNodeToNftContracts[_ensHash].length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
@@ -154,7 +163,11 @@ contract GenericEnsMapper is
 
         ParentNodeToConfig[_ensHash] = config;
 
-        emit updateEnsClaimConfig(_ensHash, _numericOnly, _overwriteUnusedSubdomains);
+        emit updateEnsClaimConfig(
+            _ensHash,
+            _numericOnly,
+            _overwriteUnusedSubdomains
+        );
     }
 
     /**
@@ -199,7 +212,8 @@ contract GenericEnsMapper is
 
         SubnodeToNftDetails[subnodeHash] = details;
 
-        if (EnsContract.owner(_ensHash) == address(EnsNameWrapper)) {
+        if (EnsToken.ownerOf(uint256(_ensHash)) == address(EnsNameWrapper)) {
+
             EnsNameWrapper.setSubnodeRecord(
                 _ensHash,
                 label,
@@ -294,7 +308,12 @@ contract GenericEnsMapper is
 
         emit AddrChanged(_subdomainHash, address(0));
         emit AddressChanged(_subdomainHash, 60, abi.encodePacked(address(0)));
-        emit SubdomainRemoved(_subdomainHash, details.NftAddress, details.NftId, name(_subdomainHash));
+        emit SubdomainRemoved(
+            _subdomainHash,
+            details.NftAddress,
+            details.NftId,
+            name(_subdomainHash)
+        );
     }
 
     // ENS resolver interface methods
