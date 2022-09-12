@@ -14,13 +14,15 @@ import "ens-contracts/resolvers/profiles/ITextResolver.sol";
 import "ens-contracts/resolvers/profiles/INameResolver.sol";
 import "ens-contracts/wrapper/INameWrapper.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "EnsPrimaryContractNamer/PrimaryEns.sol";
 
 contract GenericEnsMapper is
     IAddressResolver,
     IAddrResolver,
     ITextResolver,
     INameResolver,
-    IERC1155Receiver
+    IERC1155Receiver,
+    PrimaryEns
 {
     using Strings for *;
 
@@ -64,7 +66,7 @@ contract GenericEnsMapper is
         string _name
     );
 
-    function checkNftContracts(IERC721[] calldata _nftContracts) private {
+    function checkNftContracts(IERC721[] calldata _nftContracts) private view {
         for (uint256 i; i < _nftContracts.length; ) {
             require(
                 ERC165Checker.supportsInterface(
@@ -87,8 +89,9 @@ contract GenericEnsMapper is
         bool _numericOnly,
         bool _overWriteUnusedSubdomains
     ) external isEnsApprovedOrOwner(_ensHash) {
+        address owner = EnsContract.owner(_ensHash);
         require(
-            EnsContract.owner(_ensHash) == address(this),
+            owner == address(this) || owner == address(EnsNameWrapper),
             "controller of Ens not set to contract"
         );
         require(getDomainHash(_domainArray) == _ensHash, "incorrect namehash");
@@ -213,7 +216,6 @@ contract GenericEnsMapper is
         SubnodeToNftDetails[subnodeHash] = details;
 
         if (EnsToken.ownerOf(uint256(_ensHash)) == address(EnsNameWrapper)) {
-
             EnsNameWrapper.setSubnodeRecord(
                 _ensHash,
                 label,
@@ -249,6 +251,7 @@ contract GenericEnsMapper is
 
     function isValidNftContract(bytes32 _ensHash, IERC721 _nftContract)
         private
+        view
         returns (bool _isPresent)
     {
         IERC721[] memory contracts = ParentNodeToNftContracts[_ensHash];
@@ -433,29 +436,29 @@ contract GenericEnsMapper is
     //ERC1155 receiver
 
     function onERC1155BatchReceived(
-        address operator,
-        address from,
-        uint256[] calldata ids,
-        uint256[] calldata values,
-        bytes calldata data
-    ) external returns (bytes4) {
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external pure returns (bytes4) {
         require(false, "cannot do batch transfer");
         return this.onERC1155BatchReceived.selector;
     }
 
     function onERC1155Received(
-        address operator,
-        address from,
-        uint256 id,
-        uint256 value,
-        bytes calldata data
-    ) external returns (bytes4) {
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 
     function supportsInterface(bytes4 interfaceId)
         external
-        view
+        pure
         returns (bool)
     {
         return

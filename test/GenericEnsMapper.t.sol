@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.16;
 
+import "src/GenericEnsMapper.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 import "src/structs/Config.sol";
 import "ens-contracts/registry/ENS.sol";
 import "./mocks/Mock721.sol";
 import "./mocks/MockEns.sol";
-import "src/GenericEnsMapper.sol";
+
 import "forge-std/Test.sol";
 
 contract GenericEnsMapperTests is Test {
@@ -109,11 +110,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nftValue = mapper.ParentNodeToNftContracts(ensHash, 0);
 
         //assert
@@ -152,11 +150,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nftValue = mapper.ParentNodeToNftContracts(ensHash, 0);
 
         //assert
@@ -195,11 +190,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nftValue = mapper.ParentNodeToNftContracts(ensHash, 0);
 
         //assert
@@ -242,11 +234,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nft1Value = mapper.ParentNodeToNftContracts(ensHash, 0);
         IERC721 nft2Value = mapper.ParentNodeToNftContracts(ensHash, 1);
         IERC721 nft3Value = mapper.ParentNodeToNftContracts(ensHash, 2);
@@ -404,11 +393,8 @@ contract GenericEnsMapperTests is Test {
             !overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nftValue = mapper.ParentNodeToNftContracts(ensHash, 0);
 
         //assert
@@ -478,11 +464,8 @@ contract GenericEnsMapperTests is Test {
         );
         mapper.addContractToExistingEns(ensHash, newNft);
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nft1Value = mapper.ParentNodeToNftContracts(ensHash, 0);
         IERC721 nft2Value = mapper.ParentNodeToNftContracts(ensHash, 1);
 
@@ -737,7 +720,6 @@ contract GenericEnsMapperTests is Test {
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
         IERC721 nft = new Mock721();
-        IERC721 nft2 = new Mock721();
 
         IERC721[] memory nftArray = new IERC721[](1);
         nftArray[0] = nft;
@@ -761,11 +743,8 @@ contract GenericEnsMapperTests is Test {
             overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (bool initialisedValue, bool numericOnlyValue, ) = mapper
+            .ParentNodeToConfig(ensHash);
 
         assertTrue(initialisedValue);
 
@@ -807,11 +786,8 @@ contract GenericEnsMapperTests is Test {
             !overwriteUnusedSubdomains
         );
 
-        (
-            bool initialisedValue,
-            bool numericOnlyValue,
-            bool overwriteUnusedSubdomainsValue
-        ) = mapper.ParentNodeToConfig(ensHash);
+        (, bool numericOnlyValue, bool overwriteUnusedSubdomainsValue) = mapper
+            .ParentNodeToConfig(ensHash);
         IERC721 nft1Value = mapper.ParentNodeToNftContracts(ensHash, 0);
         IERC721 nft2Value = mapper.ParentNodeToNftContracts(ensHash, 1);
 
@@ -924,9 +900,9 @@ contract GenericEnsMapperTests is Test {
         );
 
         string[] memory labelArray2 = new string[](3);
-        labelArray[0] = label2;
-        labelArray[1] = "test";
-        labelArray[2] = "eth";
+        labelArray2[0] = label2;
+        labelArray2[1] = "test";
+        labelArray2[2] = "eth";
 
         bytes32 subnodeHash2 = keccak256(
             abi.encodePacked(ensHash, keccak256(abi.encodePacked(label2)))
@@ -1337,7 +1313,6 @@ contract GenericEnsMapperTests is Test {
         uint256 ensId = EnsTokenId;
         uint256 ensId2 = 689;
         bytes32 ensHash = bytes32(ensId);
-        bytes32 ensHash2 = bytes32(ensId2);
         bool numericOnly = false;
         bool overwriteUnusedSubdomains = false;
         Mock721 nft = new Mock721();
@@ -1424,12 +1399,9 @@ contract GenericEnsMapperTests is Test {
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensHash, 1, nft, label1);
 
-        (
-            bytes32 ParentNamehash,
-            string memory Label,
-            IERC721 nftValue,
-            uint256 idValue
-        ) = mapper.SubnodeToNftDetails(subdomainHash);
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+            subdomainHash
+        );
 
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, 1, "NFT token id incorrect");
@@ -1556,12 +1528,9 @@ contract GenericEnsMapperTests is Test {
         labelArray[0] = "2";
         bytes32 subdomainHash = mapper.getDomainHash(labelArray);
 
-        (
-            bytes32 ParentNamehash,
-            string memory Label,
-            IERC721 nftValue,
-            uint256 idValue
-        ) = mapper.SubnodeToNftDetails(subdomainHash);
+        (, , IERC721 nftValue, uint256 idValue) = mapper.SubnodeToNftDetails(
+            subdomainHash
+        );
 
         assertEq(address(nftValue), address(nft), "NFT address incorrect");
         assertEq(idValue, 2, "NFT token id incorrect");
@@ -2151,7 +2120,7 @@ contract GenericEnsMapperTests is Test {
         mapper.removeSubdomain(subnodeHash);
 
         vm.expectRevert("subdomain not configured");
-        address addr = mapper.addr(subnodeHash);
+        mapper.addr(subnodeHash);
     }
 
     function testGetCorrectAddrFromAddrResolver_pass() public {

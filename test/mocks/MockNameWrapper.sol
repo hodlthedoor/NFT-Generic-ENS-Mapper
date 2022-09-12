@@ -106,6 +106,7 @@ contract MockNameWrapper {
 
     function isTokenOwnerOrApproved(bytes32 node, address addr)
         external
+        view
         returns (bool)
     {
         return IdToApprovedAddressMap[uint256(node)][addr];
