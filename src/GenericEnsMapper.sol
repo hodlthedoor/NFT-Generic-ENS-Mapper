@@ -267,6 +267,9 @@ contract GenericEnsMapper is
         }
     }
 
+    //this doesn't need gating as it just outputs events
+    //it's here because etherscan and ens.app both use events
+    //for primary naming
     function outputEvents(bytes32 _subnodeHash) external {
         address owner = getOwnerFromDetails(_subnodeHash);
 
@@ -299,13 +302,10 @@ contract GenericEnsMapper is
      * @notice removes the subdomain mapping from this resolver contract
      * @param _subdomainHash namehash of the subdomain
      */
-    function removeSubdomain(bytes32 _subdomainHash) external {
+    function removeSubdomain(bytes32 _subdomainHash) authorised(_subdomainHash) 
+        external {
         NftDetails memory details = SubnodeToNftDetails[_subdomainHash];
         require(details.ParentNamehash != 0x0, "subdomain not configured");
-        require(
-            details.NftAddress.ownerOf(details.NftId) == msg.sender,
-            "not owner of token"
-        );
 
         delete SubnodeToNftDetails[_subdomainHash];
 

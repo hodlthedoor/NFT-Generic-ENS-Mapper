@@ -1066,7 +1066,7 @@ contract GenericEnsMapperTests is Test {
             subnodeHash
         );
         vm.stopPrank();
-        vm.expectRevert("not owner of token");
+        vm.expectRevert("not owner of subdomain");
         vm.prank(address(0x334343));
         mapper.removeSubdomain(subnodeHash);
 
