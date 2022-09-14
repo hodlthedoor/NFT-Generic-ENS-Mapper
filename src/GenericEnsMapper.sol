@@ -91,7 +91,8 @@ contract GenericEnsMapper is
     ) external isEnsApprovedOrOwner(_ensHash) {
         address owner = EnsContract.owner(_ensHash);
         require(
-            owner == address(this) || owner == address(EnsNameWrapper),
+            owner == address(this) || 
+            (owner == address(EnsNameWrapper) && owner != address(0)),
             "controller of Ens not set to contract"
         );
         require(getDomainHash(_domainArray) == _ensHash, "incorrect namehash");
