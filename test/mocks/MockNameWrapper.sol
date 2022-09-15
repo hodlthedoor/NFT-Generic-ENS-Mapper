@@ -116,7 +116,9 @@ contract MockNameWrapper {
 
     function setTTL(bytes32 node, uint64 ttl) external {}
 
-    function ownerOf(uint256 id) external returns (address owner) {}
+    function ownerOf(uint256 id) external returns (address owner) {
+        return address(4);
+    }
 
     function allFusesBurned(bytes32 node, uint32 fuseMask)
         external

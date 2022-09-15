@@ -15,6 +15,7 @@ import "ens-contracts/resolvers/profiles/INameResolver.sol";
 import "ens-contracts/wrapper/INameWrapper.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "EnsPrimaryContractNamer/PrimaryEns.sol";
+import "forge-std/console.sol";
 
 contract GenericEnsMapper is
     IAddressResolver,
@@ -29,11 +30,11 @@ contract GenericEnsMapper is
     uint256 private constant COIN_TYPE_ETH = 60;
 
     event addNftContractToEns(
-        bytes32 indexed _ensHash,
+        uint256 indexed _ensId,
         IERC721 indexed _nftContract
     );
     event updateEnsClaimConfig(
-        bytes32 indexed _ensHash,
+        uint256 indexed _ensId,
         bool _numericOnly,
         bool _canOverwriteSubdomains
     );
@@ -46,8 +47,8 @@ contract GenericEnsMapper is
 
     mapping(bytes32 => Config) public EnsToConfig;
     mapping(bytes32 => NftDetails) public SubnodeToNftDetails;
-    mapping(bytes32 => Config) public ParentNodeToConfig;
-    mapping(bytes32 => IERC721[]) public ParentNodeToNftContracts;
+    mapping(uint256 => Config) public ParentNodeToConfig;
+    mapping(uint256 => IERC721[]) public ParentNodeToNftContracts;
 
     mapping(bytes32 => mapping(address => mapping(uint256 => bytes))) OtherAddresses;
     mapping(bytes32 => mapping(bytes32 => string)) TextMappings;
@@ -84,46 +85,51 @@ contract GenericEnsMapper is
 
     function addEnsContractMapping(
         string[] calldata _domainArray,
-        bytes32 _ensHash,
+        uint256 _ensId,
         IERC721[] calldata _nftContracts,
         bool _numericOnly,
         bool _overWriteUnusedSubdomains
-    ) external isEnsApprovedOrOwner(_ensHash) {
-        address owner = EnsContract.owner(_ensHash);
+    ) external isEnsApprovedOrOwner(_ensId) {
+        bytes32 domainHash = namehashFromId(_ensId);
+        address owner = EnsContract.owner(domainHash);
         require(
-            owner == address(this) || 
-            (owner == address(EnsNameWrapper) && owner != address(0)),
+            owner == address(this) ||
+                (owner == address(EnsNameWrapper) && owner != address(0)),
             "controller of Ens not set to contract"
         );
-        require(getDomainHash(_domainArray) == _ensHash, "incorrect namehash");
+        require(
+            getDomainHash(_domainArray) == domainHash,
+            "incorrect namehash"
+        );
         require(_nftContracts.length < 6, "maximum 5 contracts per ENS");
         require(_nftContracts.length > 0, "need at least 1 NFT contract");
+        //require(isEnsApprovedOrOwner(_ensHash, uint256(keccak256(abi.encodePacked(_domainArray[0])))), "not approved");
         require(
             !(_nftContracts.length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
         );
         require(
-            !ParentNodeToConfig[_ensHash].Initialised,
+            !ParentNodeToConfig[_ensId].Initialised,
             "already been configured"
         );
         checkNftContracts(_nftContracts);
-        ParentNodeToConfig[_ensHash] = Config(
+        ParentNodeToConfig[_ensId] = Config(
             true,
             _numericOnly,
             _overWriteUnusedSubdomains,
             _domainArray
         );
-        ParentNodeToNftContracts[_ensHash] = _nftContracts;
+        ParentNodeToNftContracts[_ensId] = _nftContracts;
 
         //output events
         emit updateEnsClaimConfig(
-            _ensHash,
+            _ensId,
             _numericOnly,
             _overWriteUnusedSubdomains
         );
 
         for (uint256 i; i < _nftContracts.length; ) {
-            emit addNftContractToEns(_ensHash, _nftContracts[i]);
+            emit addNftContractToEns(_ensId, _nftContracts[i]);
 
             unchecked {
                 ++i;
@@ -131,44 +137,44 @@ contract GenericEnsMapper is
         }
     }
 
-    function addContractToExistingEns(bytes32 _ensHash, IERC721 _nftContract)
+    function addContractToExistingEns(uint256 _ensId, IERC721 _nftContract)
         external
-        isEnsApprovedOrOwner(_ensHash)
+        isEnsApprovedOrOwner(_ensId)
     {
-        uint256 numberOfContracts = ParentNodeToNftContracts[_ensHash].length;
+        uint256 numberOfContracts = ParentNodeToNftContracts[_ensId].length;
         require(numberOfContracts < 5, "maximum 5 contracts per ENS");
         require(
-            !isValidNftContract(_ensHash, _nftContract),
+            !isValidNftContract(_ensId, _nftContract),
             "duplicate NFT contract"
         );
         require(
-            !ParentNodeToConfig[_ensHash].NumericOnly,
+            !ParentNodeToConfig[_ensId].NumericOnly,
             "Numeric only not compatible with multiple contracts"
         );
 
-        ParentNodeToNftContracts[_ensHash].push(_nftContract);
-        emit addNftContractToEns(_ensHash, _nftContract);
+        ParentNodeToNftContracts[_ensId].push(_nftContract);
+        emit addNftContractToEns(_ensId, _nftContract);
     }
 
     function updateSettingsToExistingEns(
-        bytes32 _ensHash,
+        uint256 _ensId,
         bool _numericOnly,
         bool _overwriteUnusedSubdomains
-    ) external isEnsApprovedOrOwner(_ensHash) {
+    ) external isEnsApprovedOrOwner(_ensId) {
         require(
-            !(ParentNodeToNftContracts[_ensHash].length > 1 && _numericOnly),
+            !(ParentNodeToNftContracts[_ensId].length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
         );
-        Config memory config = ParentNodeToConfig[_ensHash];
+        Config memory config = ParentNodeToConfig[_ensId];
         require(config.Initialised, "ENS not configured");
 
         config.NumericOnly = _numericOnly;
         config.CanOverwriteSubdomains = _overwriteUnusedSubdomains;
 
-        ParentNodeToConfig[_ensHash] = config;
+        ParentNodeToConfig[_ensId] = config;
 
         emit updateEnsClaimConfig(
-            _ensHash,
+            _ensId,
             _numericOnly,
             _overwriteUnusedSubdomains
         );
@@ -176,29 +182,27 @@ contract GenericEnsMapper is
 
     /**
      * @notice Claim subdomain
-     * @param _ensHash parent namehash of the subdomain
+     * @param _ensId parent token id of the subdomain
      * @param _id ID of ERC-721 NFT
      * @param _nftContract address of the ERC-721 NFT contract
      * @param _label label for the subdomain
      */
     function claimSubdomain(
-        bytes32 _ensHash,
+        uint256 _ensId,
         uint96 _id,
         IERC721 _nftContract,
         string memory _label
     ) external isNftOwner(_nftContract, _id) {
-        require(
-            isValidNftContract(_ensHash, _nftContract),
-            "Not valid contract"
-        );
-        Config memory config = ParentNodeToConfig[_ensHash];
+        require(isValidNftContract(_ensId, _nftContract), "Not valid contract");
+        Config memory config = ParentNodeToConfig[_ensId];
         require(config.Initialised, "configuration for ENS not enabled");
+        bytes32 domainHash = namehashFromId(_ensId);
         string memory label = config.NumericOnly ? _id.toString() : _label;
         bytes32 subnodeHash = keccak256(
-            abi.encodePacked(_ensHash, keccak256(abi.encodePacked(label)))
+            abi.encodePacked(domainHash, keccak256(abi.encodePacked(label)))
         );
         require(
-            SubnodeToNftDetails[subnodeHash].ParentNamehash == 0x0,
+            SubnodeToNftDetails[subnodeHash].ParentTokenId == 0,
             "Subdomain has already been claimed"
         );
         require(
@@ -208,7 +212,7 @@ contract GenericEnsMapper is
         );
 
         NftDetails memory details = NftDetails(
-            _ensHash,
+            _ensId,
             label,
             _nftContract,
             _id
@@ -216,9 +220,9 @@ contract GenericEnsMapper is
 
         SubnodeToNftDetails[subnodeHash] = details;
 
-        if (EnsToken.ownerOf(uint256(_ensHash)) == address(EnsNameWrapper)) {
+        if (EnsToken.ownerOf(_ensId) == address(EnsNameWrapper)) {
             EnsNameWrapper.setSubnodeRecord(
-                _ensHash,
+                domainHash,
                 label,
                 address(this),
                 address(this),
@@ -228,7 +232,7 @@ contract GenericEnsMapper is
             );
         } else {
             EnsContract.setSubnodeRecord(
-                _ensHash,
+                domainHash,
                 keccak256(abi.encodePacked(label)),
                 address(this),
                 address(this),
@@ -250,12 +254,12 @@ contract GenericEnsMapper is
         );
     }
 
-    function isValidNftContract(bytes32 _ensHash, IERC721 _nftContract)
+    function isValidNftContract(uint256 _ensId, IERC721 _nftContract)
         private
         view
         returns (bool _isPresent)
     {
-        IERC721[] memory contracts = ParentNodeToNftContracts[_ensHash];
+        IERC721[] memory contracts = ParentNodeToNftContracts[_ensId];
         uint256 total = contracts.length;
         for (uint256 i; i < total; ) {
             if (contracts[i] == _nftContract) {
@@ -303,10 +307,12 @@ contract GenericEnsMapper is
      * @notice removes the subdomain mapping from this resolver contract
      * @param _subdomainHash namehash of the subdomain
      */
-    function removeSubdomain(bytes32 _subdomainHash) authorised(_subdomainHash) 
-        external {
+    function removeSubdomain(bytes32 _subdomainHash)
+        external
+        authorised(_subdomainHash)
+    {
         NftDetails memory details = SubnodeToNftDetails[_subdomainHash];
-        require(details.ParentNamehash != 0x0, "subdomain not configured");
+        require(details.ParentTokenId != 0, "subdomain not configured");
 
         delete SubnodeToNftDetails[_subdomainHash];
 
@@ -410,7 +416,7 @@ contract GenericEnsMapper is
     function name(bytes32 node) public view returns (string memory) {
         NftDetails memory details = SubnodeToNftDetails[node];
         string memory label = details.Label;
-        string[] memory domainArray = ParentNodeToConfig[details.ParentNamehash]
+        string[] memory domainArray = ParentNodeToConfig[details.ParentTokenId]
             .DomainArray;
         for (uint256 i; i < domainArray.length; ) {
             label = string(abi.encodePacked(label, ".", domainArray[i]));
@@ -429,7 +435,7 @@ contract GenericEnsMapper is
         returns (address)
     {
         NftDetails memory details = SubnodeToNftDetails[_subnodeHash];
-        require(details.ParentNamehash != 0x0, "subdomain not configured");
+        require(details.ParentTokenId != 0, "subdomain not configured");
         address owner = details.NftAddress.ownerOf(details.NftId);
         return owner;
     }
@@ -475,19 +481,45 @@ contract GenericEnsMapper is
         _;
     }
 
-    modifier isEnsApprovedOrOwner(bytes32 _ensHash) {
-        address owner = EnsToken.ownerOf(uint256(_ensHash));
-        require(
-            owner == msg.sender ||
-                EnsToken.isApprovedForAll(owner, msg.sender) ||
-                (owner == address(EnsNameWrapper) &&
-                    EnsNameWrapper.isTokenOwnerOrApproved(
-                        _ensHash,
-                        msg.sender
-                    )),
-            "not approved or owner"
-        );
+    modifier isEnsApprovedOrOwner(uint256 _ensId) {
+        try EnsToken.ownerOf(_ensId) returns (address owner) {
+            require(
+                owner == msg.sender ||
+                    EnsToken.isApprovedForAll(owner, msg.sender) ||
+                    (owner == address(EnsNameWrapper) &&
+                        owner != address(0) &&
+                        EnsNameWrapper.isTokenOwnerOrApproved(
+                            bytes32(_ensId),
+                            msg.sender
+                        )),
+                "not owner or approved"
+            );
+        } catch {
+            require(false, "not owner or approved");
+        }
         _;
+    }
+
+    function namehashFromId(uint256 _id)
+        public
+        view
+        returns (bytes32 _namehash)
+    {
+        if (
+            address(EnsNameWrapper) != address(0) &&
+            EnsNameWrapper.ownerOf(_id) != address(0)
+        ) {
+            _namehash = bytes32(_id);
+        } else {
+            _namehash = keccak256(
+                abi.encodePacked(
+                    bytes32(
+                        0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae
+                    ),
+                    abi.encodePacked(_id)
+                )
+            );
+        }
     }
 
     modifier authorised(bytes32 _subnodeHash) {
