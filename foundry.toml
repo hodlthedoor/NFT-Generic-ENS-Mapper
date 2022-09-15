@@ -11,5 +11,5 @@ optimizer_runs = 2_000
 [rpc_endpoints]
 goerli = "${GOERLI_RPC_URL}"
 
-[etherscan]
+[profile.etherscan]
 goerli = { key = "${ETHERSCAN_KEY}" }

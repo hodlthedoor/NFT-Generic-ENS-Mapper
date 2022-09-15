@@ -29,6 +29,8 @@ contract GenericEnsMapper is
 
     uint256 private constant COIN_TYPE_ETH = 60;
 
+    address immutable public deployer;
+
     event addNftContractToEns(
         uint256 indexed _ensId,
         IERC721 indexed _nftContract
@@ -66,6 +68,10 @@ contract GenericEnsMapper is
         uint96 indexed _tokenId,
         string _name
     );
+
+    constructor(){
+        deployer = msg.sender;
+    }
 
     function checkNftContracts(IERC721[] calldata _nftContracts) private view {
         for (uint256 i; i < _nftContracts.length; ) {
@@ -485,7 +491,8 @@ contract GenericEnsMapper is
         try EnsToken.ownerOf(_ensId) returns (address owner) {
             require(
                 owner == msg.sender ||
-                    EnsToken.isApprovedForAll(owner, msg.sender) ||
+                    (EnsToken.isApprovedForAll(owner, msg.sender) &&
+                        owner != address(EnsNameWrapper)) ||
                     (owner == address(EnsNameWrapper) &&
                         owner != address(0) &&
                         EnsNameWrapper.isTokenOwnerOrApproved(
@@ -520,6 +527,11 @@ contract GenericEnsMapper is
                 )
             );
         }
+    }
+
+    function setNameWrapper(address _addr) public {
+        require(msg.sender == deployer, "only deployer");
+        EnsNameWrapper = INameWrapper(_addr);
     }
 
     modifier authorised(bytes32 _subnodeHash) {
