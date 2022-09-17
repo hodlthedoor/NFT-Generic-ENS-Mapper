@@ -936,7 +936,7 @@ contract GenericEnsMapperTests is Test {
         uint256 ensId = EnsTokenId;
 
         bool numericOnly = false;
-        bool overwriteUnusedSubdomains = false;
+        bool overwriteUnusedSubdomains = true;
         Mock721 nft = new Mock721();
 
         address tokenOwner = address(0xfafbfc);
@@ -947,6 +947,7 @@ contract GenericEnsMapperTests is Test {
         IERC721[] memory nftArray = new IERC721[](1);
         nftArray[0] = nft;
         string memory label = "testlabel";
+        string memory label2 = "testlabel2";
 
         //set up mock ens with the mapper contract as controller
         setupMockEns(address(mapper));
@@ -963,12 +964,16 @@ contract GenericEnsMapperTests is Test {
 
         vm.startPrank(tokenOwner);
         mapper.claimSubdomain(ensId, tokenId, nft, label);
-        vm.expectRevert("Subdomain has already been claimed");
-        mapper.claimSubdomain(ensId, tokenId, nft, label);
+        vm.expectRevert("subdomain claimed for this token");
+        mapper.claimSubdomain(ensId, tokenId, nft, label2);
+        mapper.removeSubdomain(0xdfe4a4a4f47208190127fa95ff8e1716141b30a064ac9a5354121b49b0f5d66f);
+        //should be able to claim this token now.
+        mapper.claimSubdomain(ensId, tokenId, nft, label2);
+
         vm.stopPrank();
 
         string[] memory labelArray = new string[](3);
-        labelArray[0] = label;
+        labelArray[0] = label2;
         labelArray[1] = "test";
         labelArray[2] = "eth";
 

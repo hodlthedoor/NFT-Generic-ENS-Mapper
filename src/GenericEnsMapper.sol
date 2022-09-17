@@ -29,7 +29,7 @@ contract GenericEnsMapper is
 
     uint256 private constant COIN_TYPE_ETH = 60;
 
-    address immutable public deployer;
+    address public immutable deployer;
 
     event addNftContractToEns(
         uint256 indexed _ensId,
@@ -55,6 +55,8 @@ contract GenericEnsMapper is
     mapping(bytes32 => mapping(address => mapping(uint256 => bytes))) OtherAddresses;
     mapping(bytes32 => mapping(bytes32 => string)) TextMappings;
 
+    mapping(bytes32 => bool) public SubdomainClaimMap;
+
     event SubdomainClaimed(
         bytes32 indexed _nodeHash,
         IERC721 indexed _nftContract,
@@ -69,7 +71,7 @@ contract GenericEnsMapper is
         string _name
     );
 
-    constructor(){
+    constructor() {
         deployer = msg.sender;
     }
 
@@ -189,21 +191,28 @@ contract GenericEnsMapper is
     /**
      * @notice Claim subdomain
      * @param _ensId parent token id of the subdomain
-     * @param _id ID of ERC-721 NFT
+     * @param _nftId ID of ERC-721 NFT
      * @param _nftContract address of the ERC-721 NFT contract
      * @param _label label for the subdomain
      */
     function claimSubdomain(
         uint256 _ensId,
-        uint96 _id,
+        uint96 _nftId,
         IERC721 _nftContract,
         string memory _label
-    ) external isNftOwner(_nftContract, _id) {
+    ) external isNftOwner(_nftContract, _nftId) {
+        bytes32 claimHash = keccak256(
+            abi.encodePacked(_ensId, address(_nftContract), _nftId)
+        );
+        require(
+            !SubdomainClaimMap[claimHash],
+            "subdomain claimed for this token"
+        );
         require(isValidNftContract(_ensId, _nftContract), "Not valid contract");
         Config memory config = ParentNodeToConfig[_ensId];
         require(config.Initialised, "configuration for ENS not enabled");
         bytes32 domainHash = namehashFromId(_ensId);
-        string memory label = config.NumericOnly ? _id.toString() : _label;
+        string memory label = config.NumericOnly ? _nftId.toString() : _label;
         bytes32 subnodeHash = keccak256(
             abi.encodePacked(domainHash, keccak256(abi.encodePacked(label)))
         );
@@ -221,7 +230,7 @@ contract GenericEnsMapper is
             _ensId,
             label,
             _nftContract,
-            _id
+            _nftId
         );
 
         SubnodeToNftDetails[subnodeHash] = details;
@@ -246,16 +255,19 @@ contract GenericEnsMapper is
             );
         }
 
-        emit AddrChanged(subnodeHash, _nftContract.ownerOf(_id));
+        //addSubdomainClaim(_ensId, _nftContract, _nftId);
+        SubdomainClaimMap[claimHash] = true;
+
+        emit AddrChanged(subnodeHash, _nftContract.ownerOf(_nftId));
         emit AddressChanged(
             subnodeHash,
             60,
-            abi.encodePacked(_nftContract.ownerOf(_id))
+            abi.encodePacked(_nftContract.ownerOf(_nftId))
         );
         emit SubdomainClaimed(
             subnodeHash,
             _nftContract,
-            _id,
+            _nftId,
             name(subnodeHash)
         );
     }
@@ -319,7 +331,15 @@ contract GenericEnsMapper is
     {
         NftDetails memory details = SubnodeToNftDetails[_subdomainHash];
         require(details.ParentTokenId != 0, "subdomain not configured");
-
+        delete SubdomainClaimMap[
+            keccak256(
+                abi.encodePacked(
+                    details.ParentTokenId,
+                    address(details.NftAddress),
+                    details.NftId
+                )
+            )
+        ];
         delete SubnodeToNftDetails[_subdomainHash];
 
         emit AddrChanged(_subdomainHash, address(0));
@@ -348,6 +368,10 @@ contract GenericEnsMapper is
         returns (string memory)
     {
         NftDetails memory details = SubnodeToNftDetails[node];
+        require(
+            address(details.NftAddress) != address(0),
+            "subdomain not configured"
+        );
 
         if (keccak256(abi.encodePacked(key)) == keccak256("avatar")) {
             string memory str = string(
@@ -476,6 +500,7 @@ contract GenericEnsMapper is
     {
         return
             interfaceId == this.onERC1155Received.selector ||
+            interfaceId == this.onERC1155BatchReceived.selector ||
             interfaceId == 0x3b3b57de || //addr
             interfaceId == 0x59d1d43c || //text
             interfaceId == 0x691f3431 || //name
