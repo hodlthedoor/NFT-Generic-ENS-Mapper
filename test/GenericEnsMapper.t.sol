@@ -437,6 +437,29 @@ contract GenericEnsMapperTests is Test {
         );
     }
 
+   function testConfigureEnsNotAlreadyConfiguredAddNftContract_fail() public {
+        //assign
+        uint256 ensId = EnsTokenId;
+
+        bool numericOnly = false;
+        bool overwriteUnusedSubdomains = false;
+        IERC721 nft = new Mock721();
+
+        IERC721[] memory nftArray = new IERC721[](1);
+        nftArray[0] = nft;
+
+        IERC721 newNft = new Mock721();
+
+        //set up mock ens with the mapper contract as controller
+        setupMockEns(address(mapper));
+        setupMockEnsToken(ensId, address(this));
+
+        //act + assert
+        vm.expectRevert("ens not configured");
+        mapper.addContractToExistingEns(ensId, newNft);
+
+    }
+
     function testConfigureEnsAlreadyConfiguredAddNftContract_pass() public {
         //assign
         uint256 ensId = EnsTokenId;

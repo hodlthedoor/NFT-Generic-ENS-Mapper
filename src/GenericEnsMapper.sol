@@ -150,7 +150,9 @@ contract GenericEnsMapper is
         isEnsApprovedOrOwner(_ensId)
     {
         uint256 numberOfContracts = ParentNodeToNftContracts[_ensId].length;
+
         require(numberOfContracts < 5, "maximum 5 contracts per ENS");
+        require(numberOfContracts > 0, "ens not configured");
         require(
             !isValidNftContract(_ensId, _nftContract),
             "duplicate NFT contract"
