@@ -333,6 +333,9 @@ contract GenericEnsMapper is
     {
         NftDetails memory details = SubnodeToNftDetails[_subdomainHash];
         require(details.ParentTokenId != 0, "subdomain not configured");
+
+        string memory subdomainName = name(_subdomainHash);
+
         delete SubdomainClaimMap[
             keccak256(
                 abi.encodePacked(
@@ -350,7 +353,7 @@ contract GenericEnsMapper is
             _subdomainHash,
             details.NftAddress,
             details.NftId,
-            name(_subdomainHash)
+            subdomainName
         );
     }
 
@@ -450,6 +453,11 @@ contract GenericEnsMapper is
         string memory label = details.Label;
         string[] memory domainArray = ParentNodeToConfig[details.ParentTokenId]
             .DomainArray;
+
+        require(
+            address(details.NftAddress) != address(0),
+            "subdomain not configured"
+        );
         for (uint256 i; i < domainArray.length; ) {
             label = string(abi.encodePacked(label, ".", domainArray[i]));
 
