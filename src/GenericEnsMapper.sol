@@ -111,7 +111,6 @@ contract GenericEnsMapper is
         );
         require(_nftContracts.length < 6, "maximum 5 contracts per ENS");
         require(_nftContracts.length > 0, "need at least 1 NFT contract");
-        //require(isEnsApprovedOrOwner(_ensHash, uint256(keccak256(abi.encodePacked(_domainArray[0])))), "not approved");
         require(
             !(_nftContracts.length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
@@ -374,7 +373,7 @@ contract GenericEnsMapper is
     {
         NftDetails memory details = SubnodeToNftDetails[node];
         require(
-            address(details.NftAddress) != address(0),
+            details.ParentTokenId != 0,
             "subdomain not configured"
         );
 
