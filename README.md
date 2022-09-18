@@ -54,7 +54,8 @@ The `claimSubdomain` function is used by an eligible NFT holder to claim a subdo
 **_label**
 		
 		Select the label you want for your subdomain. Anything alpha-numeric (lower-case), there is no minimum character limit on subdomains so single characters are accepted. Advanced users can select other uni-code characters including emojis through the contract (at your own risk)
-		
+
+
 
 
 

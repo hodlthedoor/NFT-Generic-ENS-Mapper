@@ -28,8 +28,7 @@ contract GenericEnsMapper is
     using Strings for *;
 
     uint256 private constant COIN_TYPE_ETH = 60;
-
-    address public immutable deployer;
+    address private immutable deployer;
 
     event addNftContractToEns(
         uint256 indexed _ensId,
@@ -55,7 +54,7 @@ contract GenericEnsMapper is
     mapping(bytes32 => mapping(address => mapping(uint256 => bytes))) OtherAddresses;
     mapping(bytes32 => mapping(bytes32 => string)) TextMappings;
 
-    mapping(bytes32 => bool) public SubdomainClaimMap;
+    mapping(bytes32 => bytes32) public SubdomainClaimMap;
 
     event SubdomainClaimed(
         bytes32 indexed _nodeHash,
@@ -97,7 +96,7 @@ contract GenericEnsMapper is
         IERC721[] calldata _nftContracts,
         bool _numericOnly,
         bool _overWriteUnusedSubdomains
-    ) external isEnsApprovedOrOwner(_ensId) {
+    ) external payable isEnsApprovedOrOwner(_ensId) {
         bytes32 domainHash = namehashFromId(_ensId);
         address owner = EnsContract.owner(domainHash);
         require(
@@ -115,6 +114,7 @@ contract GenericEnsMapper is
             !(_nftContracts.length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
         );
+
         require(
             !ParentNodeToConfig[_ensId].Initialised,
             "already been configured"
@@ -146,6 +146,7 @@ contract GenericEnsMapper is
 
     function addContractToExistingEns(uint256 _ensId, IERC721 _nftContract)
         external
+        payable
         isEnsApprovedOrOwner(_ensId)
     {
         uint256 numberOfContracts = ParentNodeToNftContracts[_ensId].length;
@@ -169,7 +170,7 @@ contract GenericEnsMapper is
         uint256 _ensId,
         bool _numericOnly,
         bool _overwriteUnusedSubdomains
-    ) external isEnsApprovedOrOwner(_ensId) {
+    ) external payable isEnsApprovedOrOwner(_ensId) {
         require(
             !(ParentNodeToNftContracts[_ensId].length > 1 && _numericOnly),
             "Numeric only not compatible with multiple contracts"
@@ -201,12 +202,12 @@ contract GenericEnsMapper is
         uint96 _nftId,
         IERC721 _nftContract,
         string memory _label
-    ) external isNftOwner(_nftContract, _nftId) {
+    ) external payable isNftOwner(_nftContract, _nftId) {
         bytes32 claimHash = keccak256(
             abi.encodePacked(_ensId, address(_nftContract), _nftId)
         );
         require(
-            !SubdomainClaimMap[claimHash],
+            SubdomainClaimMap[claimHash] == 0x0,
             "subdomain claimed for this token"
         );
         require(isValidNftContract(_ensId, _nftContract), "Not valid contract");
@@ -256,8 +257,7 @@ contract GenericEnsMapper is
             );
         }
 
-        //addSubdomainClaim(_ensId, _nftContract, _nftId);
-        SubdomainClaimMap[claimHash] = true;
+        SubdomainClaimMap[claimHash] = subnodeHash;
 
         emit AddrChanged(subnodeHash, _nftContract.ownerOf(_nftId));
         emit AddressChanged(
@@ -276,13 +276,13 @@ contract GenericEnsMapper is
     function isValidNftContract(uint256 _ensId, IERC721 _nftContract)
         private
         view
-        returns (bool _isPresent)
+        returns (bool)
     {
         IERC721[] memory contracts = ParentNodeToNftContracts[_ensId];
         uint256 total = contracts.length;
         for (uint256 i; i < total; ) {
             if (contracts[i] == _nftContract) {
-                _isPresent = true;
+                return true;
             }
 
             unchecked {
@@ -294,7 +294,7 @@ contract GenericEnsMapper is
     //this doesn't need gating as it just outputs events
     //it's here because etherscan and ens.app both use events
     //for primary naming
-    function outputEvents(bytes32 _subnodeHash) external {
+    function outputEvents(bytes32 _subnodeHash) external payable {
         address owner = getOwnerFromDetails(_subnodeHash);
 
         emit AddrChanged(_subnodeHash, owner);
@@ -328,6 +328,7 @@ contract GenericEnsMapper is
      */
     function removeSubdomain(bytes32 _subdomainHash)
         external
+        payable
         authorised(_subdomainHash)
     {
         NftDetails memory details = SubnodeToNftDetails[_subdomainHash];
@@ -372,10 +373,7 @@ contract GenericEnsMapper is
         returns (string memory)
     {
         NftDetails memory details = SubnodeToNftDetails[node];
-        require(
-            details.ParentTokenId != 0,
-            "subdomain not configured"
-        );
+        require(details.ParentTokenId != 0, "subdomain not configured");
 
         if (keccak256(abi.encodePacked(key)) == keccak256("avatar")) {
             string memory str = string(
@@ -403,7 +401,7 @@ contract GenericEnsMapper is
         bytes32 node,
         string calldata key,
         string calldata value
-    ) external authorised(node) {
+    ) external payable authorised(node) {
         TextMappings[node][keccak256(abi.encodePacked(key))] = value;
         emit TextChanged(node, key, value);
     }
@@ -546,26 +544,31 @@ contract GenericEnsMapper is
         view
         returns (bytes32 _namehash)
     {
+        _namehash = bytes32(_id);
         if (
-            address(EnsNameWrapper) != address(0) &&
-            EnsNameWrapper.ownerOf(_id) != address(0)
+            !(address(EnsNameWrapper) != address(0) &&
+                EnsNameWrapper.ownerOf(_id) != address(0))
         ) {
-            _namehash = bytes32(_id);
-        } else {
             _namehash = keccak256(
                 abi.encodePacked(
                     bytes32(
                         0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae
                     ),
-                    abi.encodePacked(_id)
+                    _namehash
                 )
             );
         }
     }
 
-    function setNameWrapper(address _addr) public {
+    function setNameWrapper(address _addr) external payable {
         require(msg.sender == deployer, "only deployer");
         EnsNameWrapper = INameWrapper(_addr);
+    }
+
+    //just in case we have any funds being accidently sent to the contract
+    //payable functions are actually cheaper than none-payable.
+    function withdraw() external payable {
+        payable(deployer).transfer(address(this).balance);
     }
 
     modifier authorised(bytes32 _subnodeHash) {

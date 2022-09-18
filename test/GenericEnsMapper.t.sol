@@ -437,7 +437,7 @@ contract GenericEnsMapperTests is Test {
         );
     }
 
-   function testConfigureEnsNotAlreadyConfiguredAddNftContract_fail() public {
+    function testConfigureEnsNotAlreadyConfiguredAddNftContract_fail() public {
         //assign
         uint256 ensId = EnsTokenId;
 
@@ -457,7 +457,6 @@ contract GenericEnsMapperTests is Test {
         //act + assert
         vm.expectRevert("ens not configured");
         mapper.addContractToExistingEns(ensId, newNft);
-
     }
 
     function testConfigureEnsAlreadyConfiguredAddNftContract_pass() public {
@@ -989,7 +988,9 @@ contract GenericEnsMapperTests is Test {
         mapper.claimSubdomain(ensId, tokenId, nft, label);
         vm.expectRevert("subdomain claimed for this token");
         mapper.claimSubdomain(ensId, tokenId, nft, label2);
-        mapper.removeSubdomain(0xdfe4a4a4f47208190127fa95ff8e1716141b30a064ac9a5354121b49b0f5d66f);
+        mapper.removeSubdomain(
+            0xdfe4a4a4f47208190127fa95ff8e1716141b30a064ac9a5354121b49b0f5d66f
+        );
         //should be able to claim this token now.
         mapper.claimSubdomain(ensId, tokenId, nft, label2);
 
