@@ -2103,7 +2103,7 @@ contract GenericEnsMapperTests is Test {
         );
         assertEq(
             avatar,
-            "eip155:erc721:0x185a4dc360ce69bdccee33b3784b0282f7961aea/420",
+            "eip155:1/erc721:0x185a4dc360ce69bdccee33b3784b0282f7961aea/420",
             "Avatar is incorrect from text resolver"
         );
     }

@@ -74,22 +74,6 @@ contract GenericEnsMapper is
         deployer = msg.sender;
     }
 
-    function checkNftContracts(IERC721[] calldata _nftContracts) private view {
-        for (uint256 i; i < _nftContracts.length; ) {
-            require(
-                ERC165Checker.supportsInterface(
-                    address(_nftContracts[i]),
-                    type(IERC721).interfaceId
-                ),
-                "need to be IERC721 contracts"
-            );
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
     function addEnsContractMapping(
         string[] calldata _domainArray,
         uint256 _ensId,
@@ -273,54 +257,35 @@ contract GenericEnsMapper is
         );
     }
 
-    function isValidNftContract(uint256 _ensId, IERC721 _nftContract)
-        private
+    /**
+     * Returns the text data associated with an ENS node and key.
+     * @param node The ENS node to query.
+     * @param key The text data key to query.
+     * @return The associated text data.
+     */
+    function text(bytes32 node, string calldata key)
+        external
         view
-        returns (bool)
+        returns (string memory)
     {
-        IERC721[] memory contracts = ParentNodeToNftContracts[_ensId];
-        uint256 total = contracts.length;
-        for (uint256 i; i < total; ) {
-            if (contracts[i] == _nftContract) {
-                return true;
-            }
+        NftDetails memory details = SubnodeToNftDetails[node];
+        require(details.ParentTokenId != 0, "subdomain not configured");
 
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    //this doesn't need gating as it just outputs events
-    //it's here because etherscan and ens.app both use events
-    //for primary naming
-    function outputEvents(bytes32 _subnodeHash) external payable {
-        address owner = getOwnerFromDetails(_subnodeHash);
-
-        emit AddrChanged(_subnodeHash, owner);
-        emit AddressChanged(_subnodeHash, 60, abi.encodePacked(owner));
-    }
-
-    ///['hodl', 'pcc', 'eth']
-    function getDomainHash(string[] calldata _domainArray)
-        public
-        pure
-        returns (bytes32 namehash)
-    {
-        namehash = 0x0;
-
-        for (uint256 i = _domainArray.length; i > 0; ) {
-            unchecked {
-                --i;
-            }
-            namehash = keccak256(
+        if (keccak256(abi.encodePacked(key)) == keccak256("avatar")) {
+            string memory str = string(
                 abi.encodePacked(
-                    namehash,
-                    keccak256(abi.encodePacked(_domainArray[i]))
+                    "eip155:1/erc721:",
+                    address(details.NftAddress).toHexString(),
+                    "/",
+                    details.NftId.toString()
                 )
             );
+            return str;
+        } else {
+            return TextMappings[node][keccak256(abi.encodePacked(key))];
         }
     }
+
 
     /**
      * @notice removes the subdomain mapping from this resolver contract
@@ -357,37 +322,14 @@ contract GenericEnsMapper is
         );
     }
 
-    // ENS resolver interface methods
-    //
-    // ------------------------
+    //this doesn't need gating as it just outputs events
+    //it's here because etherscan and ens.app both use events
+    //for primary naming
+    function outputEvents(bytes32 _subnodeHash) external payable {
+        address owner = getOwnerFromDetails(_subnodeHash);
 
-    /**
-     * Returns the text data associated with an ENS node and key.
-     * @param node The ENS node to query.
-     * @param key The text data key to query.
-     * @return The associated text data.
-     */
-    function text(bytes32 node, string calldata key)
-        external
-        view
-        returns (string memory)
-    {
-        NftDetails memory details = SubnodeToNftDetails[node];
-        require(details.ParentTokenId != 0, "subdomain not configured");
-
-        if (keccak256(abi.encodePacked(key)) == keccak256("avatar")) {
-            string memory str = string(
-                abi.encodePacked(
-                    "eip155:erc721:",
-                    address(details.NftAddress).toHexString(),
-                    "/",
-                    details.NftId.toString()
-                )
-            );
-            return str;
-        } else {
-            return TextMappings[node][keccak256(abi.encodePacked(key))];
-        }
+        emit AddrChanged(_subnodeHash, owner);
+        emit AddressChanged(_subnodeHash, 60, abi.encodePacked(owner));
     }
 
     /**
@@ -432,49 +374,11 @@ contract GenericEnsMapper is
         bytes32 node,
         uint256 coinType,
         bytes memory a
-    ) public authorised(node) {
+    ) external authorised(node) {
         emit AddressChanged(node, coinType, a);
         require(coinType != COIN_TYPE_ETH, "cannot set eth address");
         address nftOwner = getOwnerFromDetails(node);
         OtherAddresses[node][nftOwner][coinType] = a;
-    }
-
-    /**
-     * Returns the name associated with an ENS node, for reverse records.
-     * Defined in EIP181.
-     * @param node The ENS node to query.
-     * @return The associated name.
-     */
-    function name(bytes32 node) public view returns (string memory) {
-        NftDetails memory details = SubnodeToNftDetails[node];
-        string memory label = details.Label;
-        string[] memory domainArray = ParentNodeToConfig[details.ParentTokenId]
-            .DomainArray;
-
-        require(
-            address(details.NftAddress) != address(0),
-            "subdomain not configured"
-        );
-        for (uint256 i; i < domainArray.length; ) {
-            label = string(abi.encodePacked(label, ".", domainArray[i]));
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        return label;
-    }
-
-    function getOwnerFromDetails(bytes32 _subnodeHash)
-        private
-        view
-        returns (address)
-    {
-        NftDetails memory details = SubnodeToNftDetails[_subnodeHash];
-        require(details.ParentTokenId != 0, "subdomain not configured");
-        address owner = details.NftAddress.ownerOf(details.NftId);
-        return owner;
     }
 
     //ERC1155 receiver
@@ -512,6 +416,105 @@ contract GenericEnsMapper is
             interfaceId == 0x59d1d43c || //text
             interfaceId == 0x691f3431 || //name
             interfaceId == 0x01ffc9a7;
+    }
+
+    /**
+     * Returns the name associated with an ENS node, for reverse records.
+     * Defined in EIP181.
+     * @param node The ENS node to query.
+     * @return The associated name.
+     */
+    function name(bytes32 node) public view returns (string memory) {
+        NftDetails memory details = SubnodeToNftDetails[node];
+        string memory label = details.Label;
+        string[] memory domainArray = ParentNodeToConfig[details.ParentTokenId]
+            .DomainArray;
+
+        require(
+            address(details.NftAddress) != address(0),
+            "subdomain not configured"
+        );
+        for (uint256 i; i < domainArray.length; ) {
+            label = string(abi.encodePacked(label, ".", domainArray[i]));
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return label;
+    }
+
+    ///['hodl', 'pcc', 'eth']
+    function getDomainHash(string[] calldata _domainArray)
+        public
+        pure
+        returns (bytes32 namehash)
+    {
+        namehash = 0x0;
+
+        for (uint256 i = _domainArray.length; i > 0; ) {
+            unchecked {
+                --i;
+            }
+            namehash = keccak256(
+                abi.encodePacked(
+                    namehash,
+                    keccak256(abi.encodePacked(_domainArray[i]))
+                )
+            );
+        }
+    }
+
+    function checkNftContracts(IERC721[] calldata _nftContracts) private view {
+        for (uint256 i; i < _nftContracts.length; ) {
+            require(
+                ERC165Checker.supportsInterface(
+                    address(_nftContracts[i]),
+                    type(IERC721).interfaceId
+                ),
+                "need to be IERC721 contracts"
+            );
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function isValidNftContract(uint256 _ensId, IERC721 _nftContract)
+        private
+        view
+        returns (bool)
+    {
+        IERC721[] memory contracts = ParentNodeToNftContracts[_ensId];
+        uint256 total = contracts.length;
+        for (uint256 i; i < total; ) {
+            if (contracts[i] == _nftContract) {
+                return true;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    // ENS resolver interface methods
+    //
+    // ------------------------
+
+
+
+    function getOwnerFromDetails(bytes32 _subnodeHash)
+        private
+        view
+        returns (address)
+    {
+        NftDetails memory details = SubnodeToNftDetails[_subnodeHash];
+        require(details.ParentTokenId != 0, "subdomain not configured");
+        address owner = details.NftAddress.ownerOf(details.NftId);
+        return owner;
     }
 
     modifier isNftOwner(IERC721 _nftContract, uint96 _id) {
@@ -566,7 +569,7 @@ contract GenericEnsMapper is
     }
 
     //just in case we have any funds being accidently sent to the contract
-    //payable functions are actually cheaper than none-payable.
+    //payable functions are cheaper than none-payable.
     function withdraw() external payable {
         payable(deployer).transfer(address(this).balance);
     }
