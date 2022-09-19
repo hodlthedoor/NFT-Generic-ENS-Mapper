@@ -16,6 +16,8 @@ https://etherscan.io/address/0x64fa880b224b112d371948914e9e667e22bddc46#code
 
 ### Details
 
+(Enter 0 as value for ether in any functions. Use of this contract is free, but payable functions cost less gas to execute.)
+
 The `addEnsContractMapping` function is used to set up an ENS subdomain claim. It has 5 inputs:
 
 **_domainArray**
